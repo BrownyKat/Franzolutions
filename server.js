@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express    = require('express');
 const http       = require('http');
+const https      = require('https');
 const { Server } = require('socket.io');
 const path       = require('path');
 const mongoose   = require('mongoose');
@@ -139,6 +140,26 @@ app.get('/api/reports', async (_req, res) => {
   }
 });
 
+// ── API: reverse geocode GPS to location labels ──────────────────────────────
+app.get('/api/reverse-geocode', async (req, res) => {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: 'Invalid coordinates' });
+    }
+
+    const primary = await reverseViaNominatim(lat, lng);
+    if (primary.barangay || primary.landmark) return res.json(primary);
+
+    const fallback = await reverseViaBigDataCloud(lat, lng);
+    return res.json(fallback);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not reverse geocode' });
+  }
+});
+
 // ── Helper: credibility score ─────────────────────────────────────────────────
 function computeCredibility({ name, contact, landmark, description, photo, gps }) {
   let score = 0;
@@ -149,6 +170,104 @@ function computeCredibility({ name, contact, landmark, description, photo, gps }
   if (photo)                                             score += 10;
   if (gps)                                               score +=  5;
   return score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+}
+
+function pickFirst(parts) {
+  for (const p of parts) {
+    if (p && String(p).trim()) return String(p).trim();
+  }
+  return '';
+}
+
+function extractBarangayFromText(text) {
+  const s = String(text || '');
+  const m = s.match(/(?:\bbrgy\.?\b|\bbarangay\b)\s*([a-z0-9][a-z0-9\s\-]*)/i);
+  if (!m || !m[1]) return '';
+  return `Barangay ${m[1].trim()}`.replace(/\s+/g, ' ');
+}
+
+function normalizeBarangayLabel(value) {
+  let s = String(value || '').trim();
+  if (!s) return '';
+  s = s.replace(/\s+/g, ' ');
+  if (/^brgy\.?/i.test(s)) return s.replace(/^brgy\.?/i, 'Barangay').replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+async function reverseViaNominatim(lat, lng) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&addressdetails=1&zoom=18`;
+  try {
+    const data = await httpsGetJson(url, {
+      'Accept-Language': 'en',
+      'User-Agent': 'Franzolutions/1.0 (Emergency Reporting App)',
+    });
+    const a = (data && data.address) || {};
+    const barangay = normalizeBarangayLabel(
+      pickFirst([
+        a.barangay,
+        extractBarangayFromText(data.display_name),
+        extractBarangayFromText(data.name),
+        a.suburb,
+        a.neighbourhood,
+        a.neighborhood,
+        a.quarter,
+        a.village,
+        a.hamlet,
+        a.city_district,
+      ])
+    );
+    const landmark = pickFirst([data.name, a.amenity, a.building, a.shop, a.tourism, a.leisure, a.road, a.pedestrian, a.footway]);
+    return { barangay, landmark };
+  } catch (_e) {
+    return { barangay: '', landmark: '' };
+  }
+}
+
+async function reverseViaBigDataCloud(lat, lng) {
+  const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&localityLanguage=en`;
+  try {
+    const data = await httpsGetJson(url, {
+      'User-Agent': 'Franzolutions/1.0 (Emergency Reporting App)',
+    });
+    const admins = (data.localityInfo && Array.isArray(data.localityInfo.administrative)) ? data.localityInfo.administrative : [];
+    const brgy = admins.find(x => /barangay/i.test(String(x.name || '')));
+    const barangay = normalizeBarangayLabel(
+      pickFirst([
+        brgy && brgy.name,
+        extractBarangayFromText(data.locality),
+        extractBarangayFromText(data.city),
+        data.locality,
+        data.city,
+        data.principalSubdivision,
+      ])
+    );
+    const landmark = pickFirst([data.locality, data.city, data.principalSubdivision]);
+    return { barangay, landmark };
+  } catch (_e) {
+    return { barangay: '', landmark: '' };
+  }
+}
+
+function httpsGetJson(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers }, res => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { body += chunk; });
+      res.on('end', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        try {
+          resolve(JSON.parse(body || '{}'));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(8000, () => req.destroy(new Error('Request timeout')));
+  });
 }
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
