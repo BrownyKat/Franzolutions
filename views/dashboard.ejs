@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MDRRMO — Dispatcher Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --amber:        #F59E0B;
@@ -70,6 +70,14 @@
     .brand-name em{font-style:normal;color:var(--amber-dark);}
     .brand-sub{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
     .header-right{display:flex;align-items:center;gap:.65rem;}
+    .header-weather{
+      display:flex;align-items:center;gap:8px;
+      padding:.38rem .92rem;min-height:38px;
+      background:var(--blue-light);border:1.5px solid var(--blue-border);border-radius:999px;
+      font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:700;color:var(--blue);
+      white-space:nowrap;
+    }
+    .header-weather svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
     .nav-btn{
       display:inline-flex;align-items:center;gap:5px;
       padding:.36rem .82rem;border:1px solid var(--border-mid);border-radius:99px;
@@ -151,6 +159,24 @@
     .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
     .main-title{font-weight:900;font-size:1.55rem;letter-spacing:-.75px;line-height:1.1;}
     .main-sub{font-size:.78rem;color:var(--muted);margin-top:3px;}
+    .main-head-tools{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem;justify-content:flex-end;}
+    .main-datetime{
+      display:flex;align-items:center;gap:10px;
+      padding:.55rem 1rem;min-height:58px;
+      background:var(--surface);border:1px solid var(--border-mid);border-radius:14px;
+      color:var(--text2);white-space:nowrap;
+    }
+    .main-datetime svg{width:24px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+    .time-block{display:flex;flex-direction:column;line-height:1.05;}
+    .clock-text{
+      font-family:'Orbitron','JetBrains Mono',monospace;
+      font-size:1.3rem;font-weight:700;letter-spacing:1.2px;color:var(--text);
+    }
+    .date-text{
+      font-family:'JetBrains Mono',monospace;
+      font-size:.67rem;font-weight:700;letter-spacing:.5px;color:var(--muted);
+      margin-top:3px;
+    }
     .filter-label-bar{
       font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;
       letter-spacing:2px;text-transform:uppercase;color:var(--muted);
@@ -307,6 +333,7 @@
       .filter-list{flex-direction:row;flex-wrap:wrap;padding:.6rem;}
       .filter-item{flex:1;min-width:100px;}
       .main{overflow:visible;}
+      .main-head-tools{align-items:flex-start;}
     }
   </style>
 </head>
@@ -325,11 +352,10 @@
     </div>
   </a>
   <div class="header-right">
-    <button class="nav-btn danger" onclick="clearAll()">
-      <!-- Heroicon: trash -->
-      <svg viewBox="0 0 24 24"><path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-      Clear All
-    </button>
+    <div class="header-weather" id="weatherText">
+      <svg viewBox="0 0 24 24"><path d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z"/></svg>
+      Loading weather...
+    </div>
     <div class="online-pill"><div class="online-dot"></div>Live</div>
   </div>
 </header>
@@ -406,6 +432,12 @@
           <div class="main-title">Live Dispatch Console</div>
           <div class="main-sub">Real-time emergency report management</div>
         </div>
+        <div class="main-head-tools">
+          <div class="main-datetime" id="dateTimeText">
+            <svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg>
+            Loading time...
+          </div>
+        </div>
       </div>
 
       <div class="filter-label-bar" id="filterLabel">All Reports</div>
@@ -426,6 +458,7 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   const socket = io();
   let reports = <%- JSON.stringify(reports) %>;
@@ -448,6 +481,83 @@
     if (s < 60) return `${s}s ago`;
     if (s < 3600) return `${Math.floor(s/60)}m ago`;
     return `${Math.floor(s/3600)}h ago`;
+  }
+
+  function updateDateTime() {
+    const el = document.getElementById('dateTimeText');
+    if (!el) return;
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const month = pad(now.getMonth() + 1);
+    const day = pad(now.getDate());
+    const year = now.getFullYear();
+    const h24 = now.getHours();
+    const hour12 = h24 % 12 || 12;
+    const minute = pad(now.getMinutes());
+    const second = pad(now.getSeconds());
+    const ampm = h24 >= 12 ? 'PM' : 'AM';
+    const dateText = `${month}/${day}/${year}`;
+    const clockText = `${pad(hour12)}:${minute}:${second} ${ampm}`;
+    el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg><div class="time-block"><span class="clock-text">${clockText}</span><span class="date-text">${dateText}</span></div>`;
+  }
+
+  function weatherCodeText(code) {
+    const map = {
+      0:'Clear',
+      1:'Mainly clear',
+      2:'Partly cloudy',
+      3:'Overcast',
+      45:'Fog',
+      48:'Fog',
+      51:'Light drizzle',
+      53:'Drizzle',
+      55:'Dense drizzle',
+      61:'Light rain',
+      63:'Rain',
+      65:'Heavy rain',
+      71:'Light snow',
+      73:'Snow',
+      75:'Heavy snow',
+      80:'Rain showers',
+      81:'Rain showers',
+      82:'Violent showers',
+      95:'Thunderstorm'
+    };
+    return map[code] || 'Unknown';
+  }
+
+  function setWeatherText(text) {
+    const el = document.getElementById('weatherText');
+    if (!el) return;
+    el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z"/></svg>${text}`;
+  }
+
+  function loadWeather() {
+    if (!navigator.geolocation) {
+      setWeatherText('Weather unavailable');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        const lat = coords.latitude;
+        const lon = coords.longitude;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const temp = data?.current?.temperature_2m;
+        const code = data?.current?.weather_code;
+        if (typeof temp !== 'number') {
+          setWeatherText('Weather unavailable');
+          return;
+        }
+        setWeatherText(`${weatherCodeText(code)} ${Math.round(temp)}°C`);
+      } catch (_err) {
+        setWeatherText('Weather unavailable');
+      }
+    }, () => {
+      setWeatherText('Location denied');
+    }, { enableHighAccuracy: false, timeout: 10000 });
   }
 
   function counts() {
@@ -536,7 +646,7 @@
           <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           Resolved
         </button>` : ''}
-        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="updStatus('${r.id}','false-report')">
+        ${(r.status!=='false-report' && (r.status!=='resolved' || r.isPanic || r.emergencyType==='PANIC SOS')) ? `<button class="act-btn danger-act" onclick="confirmFalseReport('${r.id}','${r.emergencyType}')">
           <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           False Report
         </button>` : ''}
@@ -571,6 +681,26 @@
       const msgs = {verifying:'Calling reporter to verify…',dispatched:'Response team dispatched!',resolved:'Incident resolved.',['false-report']:'Flagged as false report.'};
       toast_(id, msgs[status]||'');
     } catch(e) { toast_('Error','Could not update status.','warn'); }
+  }
+
+  function confirmFalseReport(id, emergencyType) {
+    const label = emergencyType === 'PANIC SOS' ? 'SOS report' : 'report';
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Mark as False Report?',
+        text: `You are about to flag this ${label} as false.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, flag as false',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#DC2626',
+        cancelButtonColor: '#6B7280',
+      }).then((result) => {
+        if (result.isConfirmed) updStatus(id, 'false-report');
+      });
+      return;
+    }
+    if (confirm(`Mark this ${label} as false report?`)) updStatus(id, 'false-report');
   }
 
   async function clearAll() {
@@ -608,6 +738,10 @@
 
   // initial render
   render();
+  updateDateTime();
+  setInterval(updateDateTime, 1000);
+  loadWeather();
+  setInterval(loadWeather, 600000);
 </script>
 </body>
 </html>
