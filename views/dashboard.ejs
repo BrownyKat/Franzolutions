@@ -235,6 +235,34 @@
     }
     .rcard-loc span{display:flex;align-items:center;gap:4px;}
     .rcard-loc svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+    .rcard-map{
+      margin-bottom:.9rem;
+      border:1.5px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+      background:var(--surface2);
+    }
+    .rcard-map-head{
+      display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+      padding:.5rem .75rem;
+      border-bottom:1px solid var(--border);
+      font-family:'JetBrains Mono',monospace;
+      font-size:.62rem;font-weight:700;color:var(--muted);
+      letter-spacing:.6px;text-transform:uppercase;
+      background:var(--surface);
+    }
+    .rcard-map-head a{
+      color:var(--blue);
+      text-decoration:none;
+    }
+    .rcard-map-head a:hover{text-decoration:underline;}
+    .rcard-map-canvas{
+      width:100%;
+      height:clamp(210px, 33vw, 320px);
+      border:0;
+      display:block;
+      background:#F3F4F6;
+    }
 
     .rcard-desc{
       font-size:.86rem;color:var(--text2);line-height:1.62;
@@ -307,6 +335,7 @@
       .filter-list{flex-direction:row;flex-wrap:wrap;padding:.6rem;}
       .filter-item{flex:1;min-width:100px;}
       .main{overflow:visible;}
+      .rcard-map-canvas{height:250px;}
     }
   </style>
 </head>
@@ -425,10 +454,17 @@
   <div><strong id="toastTitle"></strong><span id="toastMsg"></span></div>
 </div>
 
+<script id="initialReports" type="application/json"><%- JSON.stringify(reports) %></script>
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
-  let reports = <%- JSON.stringify(reports) %>;
+  let reports = [];
+  try {
+    const seed = JSON.parse(document.getElementById('initialReports').textContent || '[]');
+    reports = (Array.isArray(seed) ? seed : []).map(normalizeReport);
+  } catch (_e) {
+    reports = [];
+  }
   let curFilter = 'all';
 
   // ── Icon SVGs per type ──
@@ -468,11 +504,13 @@
   }
 
   function cardHTML(r) {
+    const rid = r.id || r.reportId || '';
     const tc  = typeClass[r.emergencyType] || 'ti-other';
     const ico = typeIcons[r.emergencyType] || typeIcons.Other;
     const sp  = r.status.replace('-','-');
+    const gpsMap = gpsMapHTML(r);
     return `
-    <div class="rcard sev-${r.severity}" id="card-${r.id}">
+    <div class="rcard sev-${r.severity}" id="card-${rid}">
       <div class="rcard-top">
         <div class="rcard-left">
           <div class="rcard-type">
@@ -483,7 +521,7 @@
           <div class="rcard-meta">
             <span>
               <svg viewBox="0 0 24 24"><path d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5"/></svg>
-              ${r.id}
+              ${rid || 'N/A'}
             </span>
             <span>
               <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
@@ -522,21 +560,22 @@
           ${r.severity}
         </span>
       </div>
+      ${gpsMap}
       <div class="rcard-desc">${r.description}</div>
       <div class="rcard-actions">
-        ${r.status==='new' ? `<button class="act-btn primary" onclick="updStatus('${r.id}','verifying')">
+        ${r.status==='new' ? `<button class="act-btn primary" onclick="updStatus('${rid}','verifying')">
           <svg viewBox="0 0 24 24"><path d="M2.25 6.338c0 7.5 6.089 13.587 13.589 13.587l.682-.002a1.124 1.124 0 0 0 1.12-1.065l.254-3.223a1.125 1.125 0 0 0-.89-1.207l-2.98-.67a1.125 1.125 0 0 0-1.264.597l-.75 1.5a11.775 11.775 0 0 1-4.955-4.955l1.5-.75a1.125 1.125 0 0 0 .597-1.264l-.67-2.98a1.125 1.125 0 0 0-1.207-.89l-3.223.254a1.124 1.124 0 0 0-1.065 1.12L2.25 6.338Z"/></svg>
           Verify
         </button>` : ''}
-        ${r.status==='verifying' ? `<button class="act-btn primary" onclick="updStatus('${r.id}','dispatched')">
+        ${r.status==='verifying' ? `<button class="act-btn primary" onclick="updStatus('${rid}','dispatched')">
           <svg viewBox="0 0 24 24"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
           Dispatch
         </button>` : ''}
-        ${r.status==='dispatched' ? `<button class="act-btn success" onclick="updStatus('${r.id}','resolved')">
+        ${r.status==='dispatched' ? `<button class="act-btn success" onclick="updStatus('${rid}','resolved')">
           <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           Resolved
         </button>` : ''}
-        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="updStatus('${r.id}','false-report')">
+        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="updStatus('${rid}','false-report')">
           <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           False Report
         </button>` : ''}
@@ -546,6 +585,40 @@
         </button>
       </div>
     </div>`;
+  }
+
+  function parseGps(gps) {
+    if (!gps || typeof gps !== 'string') return null;
+    const m = gps.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (!m) return null;
+    const lat = Number(m[1]);
+    const lng = Number(m[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+  }
+
+  function gpsMapHTML(r) {
+    const p = parseGps(r.gps);
+    if (!p) return '';
+    const lat = p.lat.toFixed(6);
+    const lng = p.lng.toFixed(6);
+    const open = `https://www.google.com/maps?q=${lat},${lng}`;
+    const embed = `https://maps.google.com/maps?q=${lat},${lng}&t=k&z=20&output=embed`;
+    return `
+      <div class="rcard-map">
+        <div class="rcard-map-head">
+          <span>GPS: ${lat}, ${lng}</span>
+          <a href="${open}" target="_blank" rel="noopener noreferrer">Open map</a>
+        </div>
+        <iframe class="rcard-map-canvas" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="${embed}"></iframe>
+      </div>
+    `;
+  }
+
+  function normalizeReport(r) {
+    if (!r || typeof r !== 'object') return r;
+    return { ...r, id: r.id || r.reportId || '' };
   }
 
   function render() {
@@ -564,6 +637,10 @@
   }
 
   async function updStatus(id, status) {
+    if (!id) {
+      toast_('Error', 'Missing report ID.', 'warn');
+      return;
+    }
     try {
       await fetch(`/api/report/${id}/status`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
       const r = reports.find(x=>x.id===id);
@@ -592,11 +669,12 @@
 
   // ── Socket.IO events ──
   socket.on('new-report', r => {
-    reports.unshift(r);
+    const nr = normalizeReport(r);
+    reports.unshift(nr);
     render();
-    toast_(r.isPanic?'PANIC SOS':'New Report', `${r.emergencyType} — ${r.barangay}`);
+    toast_(nr.isPanic?'PANIC SOS':'New Report', `${nr.emergencyType} — ${nr.barangay}`);
     requestAnimationFrame(()=>{
-      const el=document.getElementById(`card-${r.id}`);
+      const el=document.getElementById(`card-${nr.id}`);
       if (el){el.classList.add('card-flash');setTimeout(()=>el.classList.remove('card-flash'),1800);}
     });
   });
