@@ -285,6 +285,36 @@
     .gps-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}
     .gps-btn:hover{border-style:solid;border-color:var(--amber);color:var(--amber-dark);background:var(--amber-light);}
     .gps-btn.got{border-style:solid;border-color:var(--green);color:var(--green);background:var(--green-light);}
+    .gps-map-wrap{
+      display:none;
+      margin:-.2rem 0 1rem;
+      border:1.5px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+      background:var(--surface);
+    }
+    .gps-map-head{
+      display:flex;align-items:center;justify-content:space-between;gap:.65rem;
+      padding:.55rem .75rem;
+      border-bottom:1px solid var(--border);
+      background:var(--surface2);
+      font-family:'JetBrains Mono',monospace;
+      font-size:.62rem;font-weight:700;letter-spacing:.7px;color:var(--muted);
+      text-transform:uppercase;
+    }
+    .gps-map-head a{
+      color:var(--amber-dark);
+      text-decoration:none;
+      font-weight:700;
+    }
+    .gps-map-head a:hover{text-decoration:underline;}
+    .gps-map-frame{
+      width:100%;
+      height:210px;
+      border:0;
+      display:block;
+      background:#F3F4F6;
+    }
 
     /* upload */
     .upload-area{
@@ -629,25 +659,22 @@
       <svg viewBox="0 0 24 24"><path d="M9.348 14.651a3.75 3.75 0 0 1 0-5.303m5.304-.001a3.75 3.75 0 0 1 0 5.304m-7.425 2.122a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
       Auto-detect My Location (GPS)
     </button>
+    <div class="gps-map-wrap" id="gpsMapWrap">
+      <div class="gps-map-head">
+        <span id="gpsMapLabel">Detected location</span>
+        <a id="gpsMapLink" href="#" target="_blank" rel="noopener noreferrer">Open map</a>
+      </div>
+      <iframe class="gps-map-frame" id="gpsMapFrame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
     <input type="hidden" id="iGPS">
+    <input type="hidden" id="iGPSAt">
+    <input type="hidden" id="iGPSAcc">
     <div class="row2">
       <div class="field">
         <label>Barangay *</label>
         <div class="input-wrap has-icon">
           <svg class="field-icon" viewBox="0 0 24 24"><path d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/></svg>
-          <select id="iBarangay">
-            <option value="">— Select Barangay —</option>
-            <option>Barangay 1 - Poblacion</option>
-            <option>Barangay 2 - Sta. Cruz</option>
-            <option>Barangay 3 - San Roque</option>
-            <option>Barangay 4 - Bagong Silang</option>
-            <option>Barangay 5 - Pag-asa</option>
-            <option>Barangay 6 - Mabini</option>
-            <option>Barangay 7 - Rizal</option>
-            <option>Barangay 8 - Magsaysay</option>
-            <option>Barangay 9 - Quezon</option>
-            <option>Barangay 10 - Del Pilar</option>
-          </select>
+          <input type="text" id="iBarangay" placeholder="e.g. Barangay Rizal">
         </div>
       </div>
       <div class="field">
@@ -793,11 +820,16 @@
       pos => {
         const c = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
         document.getElementById('iGPS').value = c;
+        document.getElementById('iGPSAt').value = String(Date.now());
+        document.getElementById('iGPSAcc').value = String(Math.round(pos.coords.accuracy || 0));
+        renderReporterMap(c, 'Detected location');
+        void autoFillLocationFromCoords(pos.coords.latitude, pos.coords.longitude);
         btn.classList.add('got');
-        btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 12.75l6 6 9-13.5"/></svg> Detected: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 12.75l6 6 9-13.5"/></svg> Detected: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} (±${Math.round(pos.coords.accuracy || 0)}m)`;
         btn.disabled = false;
       },
       () => { btn.textContent = 'Could not detect location — fill in manually.'; btn.disabled = false; }
+      , { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
   }
 
@@ -820,10 +852,19 @@
     if (!name||!contact||!selType_||!selSev_||!barangay||!landmark||!description) {
       toast('Missing fields', 'Please complete all required fields and selections.','warn'); return;
     }
+
+    // Always try to refresh GPS right before sending report for better accuracy.
+    const liveGps = await tryGetLiveGps(12000);
+    const gpsValue = liveGps || document.getElementById('iGPS').value;
+    if (!parseGps(gpsValue)) {
+      toast('Location required', 'Please enable Location/GPS and try again.','warn');
+      return;
+    }
+
     try {
       const res = await fetch('/api/report', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ name, contact, emergencyType: selType_, severity: selSev_, barangay, landmark, street: document.getElementById('iStreet').value.trim(), description, gps: document.getElementById('iGPS').value, photo: photoData })
+        body: JSON.stringify({ name, contact, emergencyType: selType_, severity: selSev_, barangay, landmark, street: document.getElementById('iStreet').value.trim(), description, gps: gpsValue, photo: photoData })
       });
       const d = await res.json();
       if (d.success) { document.getElementById('rptId').textContent = d.id; document.getElementById('successOverlay').classList.add('show'); resetForm(); }
@@ -831,13 +872,14 @@
   }
 
   function resetForm() {
-    ['iName','iContact','iLandmark','iStreet','iDesc','iGPS'].forEach(id => document.getElementById(id).value='');
+    ['iName','iContact','iLandmark','iStreet','iDesc','iGPS','iGPSAt','iGPSAcc'].forEach(id => document.getElementById(id).value='');
     document.getElementById('iBarangay').value='';
     document.querySelectorAll('.etype-btn').forEach(b=>b.classList.remove('sel'));
     document.querySelectorAll('.sev-btn').forEach(b=>b.classList.remove('sel'));
     selType_=''; selSev_=''; photoData=null;
     const g=document.getElementById('gpsBtn');
     g.classList.remove('got'); g.disabled=false;
+    document.getElementById('gpsMapWrap').style.display='none';
     g.innerHTML=`<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M9.348 14.651a3.75 3.75 0 0 1 0-5.303m5.304-.001a3.75 3.75 0 0 1 0 5.304m-7.425 2.122a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg> Auto-detect My Location (GPS)`;
     document.getElementById('uploadArea').innerHTML=`<input type="file" accept="image/*" onchange="handlePhoto(this)"><svg viewBox="0 0 24 24" style="width:34px;height:34px;stroke:var(--muted2);fill:none;stroke-width:1.5;margin-bottom:.2rem;transition:stroke .2s"><path d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z"/><path d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z"/></svg><div class="upload-label">Click or drag to upload a photo</div><div class="upload-hint">JPG, PNG — up to 10 MB</div>`;
   }
@@ -874,12 +916,37 @@
         document.getElementById('confirmedState').classList.add('show');
       } catch(e) { closeSending(); toast('Error','Could not send SOS.','warn'); }
     };
+
+    const fallbackGps = document.getElementById('iGPS').value || '';
+    const fallbackGpsAt = Number(document.getElementById('iGPSAt').value || 0);
+    const fallbackGpsAcc = Number(document.getElementById('iGPSAcc').value || 99999);
+    const FALLBACK_MAX_AGE_MS = 2 * 60 * 1000; // 2 minutes
+    const FALLBACK_MAX_ACC_M = 200; // reject very coarse locations
+    const sendWithFallback = () => {
+      const ageOk = fallbackGpsAt > 0 && (Date.now() - fallbackGpsAt) <= FALLBACK_MAX_AGE_MS;
+      const accOk = Number.isFinite(fallbackGpsAcc) && fallbackGpsAcc <= FALLBACK_MAX_ACC_M;
+      if (parseGps(fallbackGps) && ageOk && accOk) {
+        renderReporterMap(fallbackGps, 'Panic SOS location');
+        send(fallbackGps);
+      } else {
+        send('unavailable');
+      }
+    };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        p => send(`${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`),
-        () => send('unavailable'), {timeout:5000}
+        p => {
+          const gps = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
+          document.getElementById('iGPS').value = gps;
+          document.getElementById('iGPSAt').value = String(Date.now());
+          document.getElementById('iGPSAcc').value = String(Math.round(p.coords.accuracy || 0));
+          renderReporterMap(gps, 'Panic SOS location');
+          send(gps);
+        },
+        () => sendWithFallback(),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-    } else { send('unavailable'); }
+    } else { sendWithFallback(); }
   }
   function closeSending() { document.getElementById('sendingOverlay').classList.remove('show'); }
 
@@ -896,6 +963,110 @@
   const s=document.createElement('style');
   s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
   document.head.appendChild(s);
+
+  function parseGps(gps) {
+    if (!gps || typeof gps !== 'string') return null;
+    const m = gps.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+    if (!m) return null;
+    const lat = Number(m[1]);
+    const lng = Number(m[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+  }
+
+  function toEmbedUrl(lat, lng) {
+    return `https://maps.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}&t=k&z=16&output=embed`;
+  }
+
+  function renderReporterMap(gps, label = 'Detected location') {
+    const p = parseGps(gps);
+    const wrap = document.getElementById('gpsMapWrap');
+    if (!p || !wrap) return;
+    const src = toEmbedUrl(p.lat, p.lng);
+    const openUrl = `https://www.google.com/maps?q=${p.lat.toFixed(6)},${p.lng.toFixed(6)}&t=k`;
+    document.getElementById('gpsMapFrame').src = src;
+    document.getElementById('gpsMapLink').href = openUrl;
+    document.getElementById('gpsMapLabel').textContent = `${label}: ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    wrap.style.display = 'block';
+  }
+
+  function normText(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  function pickFirst(parts) {
+    for (const p of parts) {
+      if (p && String(p).trim()) return String(p).trim();
+    }
+    return '';
+  }
+
+  function maybeSetBarangay(detected) {
+    const raw = String(detected || '').trim();
+    if (!raw) return false;
+
+    const inp = document.getElementById('iBarangay');
+    if (!inp || inp.value.trim()) return false;
+    const target = raw.replace(/^brgy\.?\s*/i, 'Barangay ').trim();
+    inp.value = target;
+    return true;
+  }
+
+  function maybeSetLandmark(detected) {
+    const text = String(detected || '').trim();
+    if (!text) return false;
+    const inp = document.getElementById('iLandmark');
+    if (inp.value.trim()) return false;
+    inp.value = text;
+    return true;
+  }
+
+  async function reverseGeocode(lat, lng) {
+    const url = `/api/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
+    try {
+      const r = await fetch(url);
+      if (r.ok) {
+        const j = await r.json();
+        return {
+          barangay: String((j && j.barangay) || '').trim(),
+          landmark: String((j && j.landmark) || '').trim(),
+        };
+      }
+    } catch (_e) {}
+
+    return { barangay: '', landmark: '' };
+  }
+
+  async function autoFillLocationFromCoords(lat, lng) {
+    const info = await reverseGeocode(lat, lng);
+    const fallbackLandmark = `Near ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    const changedBarangay = maybeSetBarangay(info.barangay || '');
+    const changedLandmark = maybeSetLandmark(info.landmark ? `Near ${info.landmark}` : fallbackLandmark);
+    if (changedBarangay || changedLandmark) {
+      toast('Location autofill', 'Barangay/Landmark populated from detected GPS.');
+    }
+  }
+
+  async function tryGetLiveGps(timeoutMs = 12000) {
+    if (!navigator.geolocation) return null;
+    return new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const gps = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          document.getElementById('iGPS').value = gps;
+          document.getElementById('iGPSAt').value = String(Date.now());
+          document.getElementById('iGPSAcc').value = String(Math.round(pos.coords.accuracy || 0));
+          renderReporterMap(gps, 'Detected location');
+          void autoFillLocationFromCoords(pos.coords.latitude, pos.coords.longitude);
+          resolve(gps);
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 }
+      );
+    });
+  }
 </script>
 </body>
 </html>
+
