@@ -19,22 +19,22 @@ const app    = express();
 const server = http.createServer(app);
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
 const COOKIE_NAME = 'auth_token';
-const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || 'change-me-session-secret');
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of SESSIONS.entries()) {
-    if (!session || session.expiresAt < now) SESSIONS.delete(token);
-  }
-}, 1000 * 60 * 10).unref();
+const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
+const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
+  ? new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.PUSHER_CLUSTER,
+    useTLS: true,
+  })
+  : null;
 
 // â”€â”€ Database connection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log('  âœ”  MongoDB connected'))
-  .catch(err => { console.error('  âœ˜  MongoDB connection error:', err.message); process.exit(1); });
-  .then(async () => {
-    console.log('  ✔  MongoDB connected');
+async function initDatabase() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('  âœ”  MongoDB connected');
     await ensureDefaultAdmin();
   } catch (err) {
     console.error('  âœ˜  MongoDB connection error:', err.message);
@@ -49,35 +49,43 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(async (req, res, next) => {
   const token = getCookie(req, COOKIE_NAME);
   if (!token) return next();
-  const now = Date.now();
+  try {
+    const session = await Session.findOne({ token }).lean();
+    if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
+      await Session.deleteOne({ token });
+      clearSessionCookie(res);
+      return next();
+    }
 
-  let session = SESSIONS.get(token);
-  if (session && session.expiresAt < now) {
-    SESSIONS.delete(token);
-    session = null;
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    await Session.updateOne({ token }, { $set: { expiresAt } });
+    req.auth = {
+      role: session.role,
+      userId: session.userId,
+      username: session.username,
+      fullName: session.fullName,
+      expiresAt: expiresAt.getTime(),
+    };
+    req.authToken = token;
+    res.locals.auth = req.auth;
+  } catch (err) {
+    console.error('[auth] session lookup failed:', err && err.message ? err.message : err);
   }
-
-  // Fallback for stateless/serverless deployments (e.g. Vercel),
-  // where in-memory sessions are not guaranteed across requests.
-  if (!session) {
-    session = verifySessionToken(token);
-  }
-  if (!session || session.expiresAt < now) {
-    clearSessionCookie(res);
-    return next();
-  }
-
-  req.auth = { ...session };
-  req.authToken = token;
-  res.locals.auth = req.auth;
+  next();
+});
+app.use((req, res, next) => {
+  res.locals.realtime = {
+    provider: 'pusher',
+    key: process.env.PUSHER_KEY || '',
+    cluster: process.env.PUSHER_CLUSTER || '',
+    channel: REALTIME_CHANNEL,
+  };
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// â”€â”€ Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-app.get('/', (_req, res) => res.render('index'));
 // Prevent cached protected pages from showing after logout (back button issue).
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -231,7 +239,6 @@ app.get('/dashboard', requireRolesPage(['dispatcher'], '/dispatcher/login'), asy
   }
 });
 
-// â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/login'), async (req, res) => {
   try {
     const dispatcher = await Dispatcher.findById(req.auth.userId).lean();
@@ -267,12 +274,12 @@ app.post('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/lo
     dispatcher.phone = phone;
     await dispatcher.save();
 
-    createSession(req, res, {
-      role: 'dispatcher',
-      userId: String(dispatcher._id),
-      username: dispatcher.username,
-      fullName: dispatcher.fullName || dispatcher.username,
-    });
+    if (req.authToken) {
+      await Session.updateOne(
+        { token: req.authToken },
+        { $set: { fullName: dispatcher.fullName || dispatcher.username } }
+      );
+    }
 
     await logAudit({
       actorRole: 'dispatcher',
@@ -497,6 +504,7 @@ app.post('/api/panic', async (req, res) => {
       isPanic:       true,
       timestamp:     new Date(),
     });
+
     const payload = report.toJSON();
     await emitRealtime('new-report', payload);
     res.json({ success: true, id: reportId });
@@ -507,8 +515,6 @@ app.post('/api/panic', async (req, res) => {
 });
 
 // â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-app.patch('/api/report/:id/status', async (req, res) => {
-// ── API: update status ───────────────────────────────────────────────────────
 app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
   try {
     const where = reportLookupQuery(req.params.id);
@@ -590,55 +596,7 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
   }
 });
 
-// API: update reporter details
-app.patch('/api/report/:id/details', async (req, res) => {
-  try {
-    const allowedFields = ['name', 'contact', 'emergencyType', 'severity', 'barangay', 'landmark', 'street', 'description', 'gps'];
-    const updates = {};
-
-    for (const field of allowedFields) {
-      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-        updates[field] = String(req.body[field] ?? '').trim();
-      }
-    }
-
-    if (!Object.keys(updates).length) {
-      return res.status(400).json({ error: 'No editable fields provided' });
-    }
-
-    const where = reportLookupQuery(req.params.id);
-    const current = await Report.findOne(where);
-    if (!current) return res.status(404).json({ error: 'Not found' });
-
-    const merged = {
-      name: current.name,
-      contact: current.contact,
-      landmark: current.landmark,
-      description: current.description,
-      photo: current.photo,
-      gps: current.gps,
-      ...updates,
-    };
-    updates.credibility = computeCredibility(merged);
-
-    const report = await Report.findOneAndUpdate(
-      where,
-      updates,
-      { new: true }
-    );
-
-    const payload = report.toJSON();
-    io.emit('report-details-updated', payload);
-    res.json({ success: true, report: payload });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Could not update report details' });
-  }
-});
-
 // â”€â”€ API: delete all reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-app.delete('/api/reports', async (_req, res) => {
-// ── API: delete all reports ──────────────────────────────────────────────────
 app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req, res) => {
   try {
     const beforeCount = await Report.countDocuments({});
@@ -704,16 +662,7 @@ function computeCredibility({ name, contact, landmark, description, photo, gps }
   return score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
 }
 
-function parseGpsString(gps) {
-  const s = String(gps || '');
-  const m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-  if (!m) return null;
-  const lat = Number(m[1]);
-  const lng = Number(m[2]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-  return { lat, lng };
-}function pickFirst(parts) {
+function pickFirst(parts) {
   for (const p of parts) {
     if (p && String(p).trim()) return String(p).trim();
   }
@@ -833,7 +782,6 @@ function httpsGetJson(url, headers = {}) {
   });
 }
 
-// â”€â”€ Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getCookie(req, name) {
   const raw = String((req && req.headers && req.headers.cookie) || '');
   if (!raw) return '';
@@ -853,10 +801,16 @@ function getCookie(req, name) {
 
 async function createSession(req, res, payload) {
   const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
-  if (currentToken) SESSIONS.delete(currentToken);
-  const token = signSessionToken(payload);
-  const session = { ...payload, expiresAt: Date.now() + SESSION_TTL_MS };
-  SESSIONS.set(token, session);
+  if (currentToken) await Session.deleteOne({ token: currentToken });
+  const token = crypto.randomBytes(24).toString('hex');
+  await Session.create({
+    token,
+    role: payload.role,
+    userId: payload.userId,
+    username: payload.username,
+    fullName: payload.fullName,
+    expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+  });
   res.cookie(COOKIE_NAME, token, {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
@@ -877,55 +831,6 @@ async function destroySession(req, res) {
   const token = req.authToken || getCookie(req, COOKIE_NAME);
   if (token) await Session.deleteOne({ token });
   clearSessionCookie(res);
-}
-
-function toBase64Url(input) {
-  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function fromBase64Url(input) {
-  const base = String(input || '').replace(/-/g, '+').replace(/_/g, '/');
-  const padLen = (4 - (base.length % 4)) % 4;
-  return Buffer.from(base + '='.repeat(padLen), 'base64').toString('utf8');
-}
-
-function signSessionToken(payload) {
-  const body = toBase64Url(JSON.stringify({
-    role: payload.role,
-    userId: payload.userId,
-    username: payload.username,
-    fullName: payload.fullName,
-    expiresAt: Date.now() + SESSION_TTL_MS,
-  }));
-  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
-  return `${body}.${sig}`;
-}
-
-function verifySessionToken(token) {
-  const raw = String(token || '');
-  const parts = raw.split('.');
-  if (parts.length !== 2) return null;
-  const [body, sig] = parts;
-  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
-  try {
-    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
-  } catch (_e) {
-    return null;
-  }
-  try {
-    const data = JSON.parse(fromBase64Url(body));
-    if (!data || !data.role || !data.userId || !data.expiresAt) return null;
-    if (Number(data.expiresAt) < Date.now()) return null;
-    return {
-      role: data.role,
-      userId: data.userId,
-      username: data.username || '',
-      fullName: data.fullName || data.username || '',
-      expiresAt: Number(data.expiresAt),
-    };
-  } catch (_e) {
-    return null;
-  }
 }
 
 function requireRolesPage(roles, loginPath = '/dispatcher/login') {
@@ -1146,14 +1051,16 @@ process.on('uncaughtException', err => {
 
 // â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
-  console.log(`  Reporter  â†’  http://localhost:${PORT}/report`);
-  console.log(`  Dashboard â†’  http://localhost:${PORT}/dashboard\n`);
-  console.log(`  Reporter        -> http://localhost:${PORT}/report`);
-  console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
-  console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
-  console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
-  console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
+    console.log(`  Reporter        -> http://localhost:${PORT}/report`);
+    console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
+    console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
+    console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
+    console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
+  });
+}
+
+module.exports = app;
 
