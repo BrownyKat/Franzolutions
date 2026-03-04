@@ -499,7 +499,7 @@
     <div class="panic-btn-label">PANIC SOS</div>
   </button>
   <div class="panic-sublabel" id="panicSublabel">
-    <strong>Tap to send instant SOS.</strong><br>Sends your GPS location immediately — no forms needed.
+    <strong>Tap to send instant SOS.</strong><br>Sends your exact location immediately - no forms needed.
   </div>
   <div class="panic-number-pill" id="panicPill" onclick="openPanicSetup()" style="display:none;">
     <!-- Heroicon: phone -->
@@ -763,7 +763,7 @@
       <svg viewBox="0 0 24 24"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
     </div>
     <h2 class="red">Sending SOS…</h2>
-    <p style="color:var(--text2);margin-top:.5rem;font-size:.93rem;">Acquiring GPS location and alerting dispatchers</p>
+    <p style="color:var(--text2);margin-top:.5rem;font-size:.93rem;">Acquiring exact location and alerting dispatchers</p>
   </div>
   <div class="confirmed" id="confirmedState">
     <div class="confirm-ring">
@@ -799,7 +799,7 @@
   function initPanicUI() {
     document.getElementById('savedNum').textContent = panicNum;
     document.getElementById('panicPill').style.display = 'inline-flex';
-    document.getElementById('panicSublabel').innerHTML = '<strong>One tap sends instant SOS.</strong><br>Your GPS location will be sent to dispatchers immediately.';
+    document.getElementById('panicSublabel').innerHTML = '<strong>One tap sends instant SOS.</strong><br>Your exact location will be sent to dispatchers immediately.';
   }
 
   function selType(el, t) {
@@ -906,13 +906,20 @@
     document.getElementById('sendingState').style.display='block';
     document.getElementById('confirmedState').classList.remove('show');
     document.getElementById('sendingOverlay').classList.add('show');
-    const send = async gps => {
+    const send = async loc => {
+      const payload = {
+        contact: panicNum,
+        gps: loc.gps || 'unavailable',
+        barangay: loc.barangay || '',
+        landmark: loc.landmark || '',
+        street: loc.street || '',
+      };
       try {
-        const res = await fetch('/api/panic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact:panicNum,gps})});
+        const res = await fetch('/api/panic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         const d = await res.json();
         document.getElementById('sendingState').style.display='none';
         document.getElementById('sosId').textContent = d.id;
-        document.getElementById('gpsNote').textContent = gps && gps!=='unavailable' ? `Location sent: ${gps}` : 'GPS unavailable — dispatcher will call you';
+        document.getElementById('gpsNote').textContent = loc.locationText || 'Location unavailable - dispatcher will call you';
         document.getElementById('confirmedState').classList.add('show');
       } catch(e) { closeSending(); toast('Error','Could not send SOS.','warn'); }
     };
@@ -922,31 +929,33 @@
     const fallbackGpsAcc = Number(document.getElementById('iGPSAcc').value || 99999);
     const FALLBACK_MAX_AGE_MS = 2 * 60 * 1000; // 2 minutes
     const FALLBACK_MAX_ACC_M = 200; // reject very coarse locations
-    const sendWithFallback = () => {
+    const sendWithFallback = async () => {
       const ageOk = fallbackGpsAt > 0 && (Date.now() - fallbackGpsAt) <= FALLBACK_MAX_AGE_MS;
       const accOk = Number.isFinite(fallbackGpsAcc) && fallbackGpsAcc <= FALLBACK_MAX_ACC_M;
       if (parseGps(fallbackGps) && ageOk && accOk) {
         renderReporterMap(fallbackGps, 'Panic SOS location');
-        send(fallbackGps);
+        const loc = await buildPanicLocationPayload(fallbackGps);
+        await send(loc);
       } else {
-        send('unavailable');
+        await send({ gps: 'unavailable', barangay: '', landmark: '', street: '', locationText: 'Location unavailable - dispatcher will call you' });
       }
     };
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        p => {
+        async p => {
           const gps = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
           document.getElementById('iGPS').value = gps;
           document.getElementById('iGPSAt').value = String(Date.now());
           document.getElementById('iGPSAcc').value = String(Math.round(p.coords.accuracy || 0));
           renderReporterMap(gps, 'Panic SOS location');
-          send(gps);
+          const loc = await buildPanicLocationPayload(gps);
+          await send(loc);
         },
-        () => sendWithFallback(),
+        () => { void sendWithFallback(); },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-    } else { sendWithFallback(); }
+    } else { void sendWithFallback(); }
   }
   function closeSending() { document.getElementById('sendingOverlay').classList.remove('show'); }
 
@@ -1031,11 +1040,37 @@
         return {
           barangay: String((j && j.barangay) || '').trim(),
           landmark: String((j && j.landmark) || '').trim(),
+          street: String((j && j.street) || '').trim(),
         };
       }
     } catch (_e) {}
 
-    return { barangay: '', landmark: '' };
+    return { barangay: '', landmark: '', street: '' };
+  }
+
+  async function buildPanicLocationPayload(gps) {
+    const p = parseGps(gps);
+    if (!p) {
+      return { gps: 'unavailable', barangay: '', landmark: '', street: '', locationText: 'Location unavailable - dispatcher will call you' };
+    }
+
+    const info = await reverseGeocode(p.lat, p.lng);
+    const barangay = info.barangay || '';
+    const street = info.street || '';
+    const landmark = info.landmark || `Near ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    const locationText = pickFirst([
+      [street, landmark, barangay].filter(Boolean).join(', '),
+      [landmark, barangay].filter(Boolean).join(', '),
+      `GPS ${gps}`,
+    ]);
+
+    return {
+      gps,
+      barangay,
+      landmark,
+      street,
+      locationText: `Location sent: ${locationText}`,
+    };
   }
 
   async function autoFillLocationFromCoords(lat, lng) {
