@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const express    = require('express');
 const http       = require('http');
@@ -14,20 +14,20 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
 
-// ── Database connection ──────────────────────────────────────────────────────
+// â”€â”€ Database connection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log('  ✔  MongoDB connected'))
-  .catch(err => { console.error('  ✘  MongoDB connection error:', err.message); process.exit(1); });
+  .then(() => console.log('  âœ”  MongoDB connected'))
+  .catch(err => { console.error('  âœ˜  MongoDB connection error:', err.message); process.exit(1); });
 
-// ── Middleware ───────────────────────────────────────────────────────────────
+// â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// ── Pages ────────────────────────────────────────────────────────────────────
+// â”€â”€ Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/', (_req, res) => res.render('index'));
 
 app.get('/report', (_req, res) => res.render('report'));
@@ -42,7 +42,7 @@ app.get('/dashboard', async (_req, res) => {
   }
 });
 
-// ── API: submit a normal report ──────────────────────────────────────────────
+// â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/report', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('report');
@@ -66,22 +66,32 @@ app.post('/api/report', async (req, res) => {
   }
 });
 
-// ── API: Panic SOS ───────────────────────────────────────────────────────────
+// â”€â”€ API: Panic SOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/panic', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('panic');
-    const reportId = `SOS-${String(seq).padStart(4, '0')}`;
-
+    const reportId = SOS-;
+    const parsedGps = parseGpsString(req.body.gps);
+    let resolvedBarangay = '';
+    let resolvedLandmark = '';
+    if (parsedGps) {
+      const primary = await reverseViaNominatim(parsedGps.lat, parsedGps.lng);
+      const fallback = (primary.barangay || primary.landmark)
+        ? { barangay: '', landmark: '' }
+        : await reverseViaBigDataCloud(parsedGps.lat, parsedGps.lng);
+      resolvedBarangay = pickFirst([primary.barangay, fallback.barangay]);
+      resolvedLandmark = pickFirst([primary.landmark, fallback.landmark]);
+    }
     const report = await Report.create({
       reportId,
       name:          'PANIC ALERT',
       contact:       req.body.contact,
       emergencyType: 'PANIC SOS',
       severity:      'High',
-      barangay:      'Unknown – GPS only',
-      landmark:      req.body.gps || 'GPS unavailable',
+      barangay:      resolvedBarangay || 'Unknown - GPS only',
+      landmark:      resolvedLandmark || req.body.gps || 'GPS unavailable',
       street:        '',
-      description:   `INSTANT PANIC ALERT – Caller needs immediate callback. GPS: ${req.body.gps || 'unavailable'}`,
+      description:   INSTANT PANIC ALERT - Caller needs immediate callback. GPS: ,
       gps:           req.body.gps || '',
       photo:         null,
       status:        'new',
@@ -89,7 +99,6 @@ app.post('/api/panic', async (req, res) => {
       isPanic:       true,
       timestamp:     new Date(),
     });
-
     const payload = report.toJSON();
     io.emit('new-report', payload);
     res.json({ success: true, id: reportId });
@@ -99,7 +108,7 @@ app.post('/api/panic', async (req, res) => {
   }
 });
 
-// ── API: update status ───────────────────────────────────────────────────────
+// â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.patch('/api/report/:id/status', async (req, res) => {
   try {
     const report = await Report.findOneAndUpdate(
@@ -116,7 +125,7 @@ app.patch('/api/report/:id/status', async (req, res) => {
   }
 });
 
-// ── API: delete all reports ──────────────────────────────────────────────────
+// â”€â”€ API: delete all reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.delete('/api/reports', async (_req, res) => {
   try {
     await Report.deleteMany({});
@@ -129,7 +138,7 @@ app.delete('/api/reports', async (_req, res) => {
   }
 });
 
-// ── API: list all reports (JSON) ─────────────────────────────────────────────
+// â”€â”€ API: list all reports (JSON) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reports', async (_req, res) => {
   try {
     const reports = await Report.find().sort({ timestamp: -1 }).lean({ virtuals: true });
@@ -140,7 +149,7 @@ app.get('/api/reports', async (_req, res) => {
   }
 });
 
-// ── API: reverse geocode GPS to location labels ──────────────────────────────
+// â”€â”€ API: reverse geocode GPS to location labels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reverse-geocode', async (req, res) => {
   try {
     const lat = Number(req.query.lat);
@@ -160,7 +169,7 @@ app.get('/api/reverse-geocode', async (req, res) => {
   }
 });
 
-// ── Helper: credibility score ─────────────────────────────────────────────────
+// â”€â”€ Helper: credibility score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function computeCredibility({ name, contact, landmark, description, photo, gps }) {
   let score = 0;
   if (name        && name.trim().split(' ').length >= 2) score += 25;
@@ -172,7 +181,16 @@ function computeCredibility({ name, contact, landmark, description, photo, gps }
   return score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
 }
 
-function pickFirst(parts) {
+function parseGpsString(gps) {
+  const s = String(gps || '');
+  const m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}function pickFirst(parts) {
   for (const p of parts) {
     if (p && String(p).trim()) return String(p).trim();
   }
@@ -270,16 +288,17 @@ function httpsGetJson(url, headers = {}) {
   });
 }
 
-// ── Socket.IO ────────────────────────────────────────────────────────────────
+// â”€â”€ Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 io.on('connection', socket => {
   console.log(`[socket] connected     ${socket.id}`);
   socket.on('disconnect', () => console.log(`[socket] disconnected  ${socket.id}`));
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
-  console.log(`  Reporter  →  http://localhost:${PORT}/report`);
-  console.log(`  Dashboard →  http://localhost:${PORT}/dashboard\n`);
+  console.log(`  Reporter  â†’  http://localhost:${PORT}/report`);
+  console.log(`  Dashboard â†’  http://localhost:${PORT}/dashboard\n`);
 });
+
