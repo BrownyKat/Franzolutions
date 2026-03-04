@@ -41,7 +41,7 @@
     }
     .layout{display:flex;min-height:100vh}
     .side{
-      width:288px;flex-shrink:0;
+      width:312px;flex-shrink:0;
       background:linear-gradient(180deg,#fffdfa,#fff8ef);
       border-right:1px solid var(--border);
       padding:16px 14px;
@@ -51,16 +51,16 @@
       border:1px solid var(--border);
       border-radius:var(--r-lg);
       background:#fff;
-      padding:12px 12px 11px;
+      padding:13px 12px 12px;
       box-shadow:var(--shadow-sm);
-      margin-bottom:12px;
+      margin-bottom:14px;
     }
     .brand{
       display:flex;align-items:center;gap:10px;
       font-weight:900;font-size:20px;line-height:1.1;
     }
     .brand-badge{
-      width:36px;height:36px;border-radius:10px;
+      width:38px;height:38px;border-radius:10px;
       background:linear-gradient(145deg,#f59e0b,#d97706);
       display:flex;align-items:center;justify-content:center;
       color:#fff;font-weight:900;
@@ -82,14 +82,15 @@
       display:flex;align-items:center;gap:10px;width:100%;
       text-align:left;text-decoration:none;
       background:#fff;border:1px solid var(--border);
-      border-radius:12px;padding:11px 12px;
-      color:var(--text);font-weight:700;cursor:pointer;
+      border-radius:14px;padding:14px 13px;
+      color:var(--text);font-weight:800;font-size:18px;line-height:1.2;cursor:pointer;
       transition:.18s ease;
       font-family:'Outfit',sans-serif;
     }
     .nav-item svg,.nav button svg{
-      width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;
+      width:20px;height:20px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
       stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
+      overflow:visible;
     }
     .nav-item:hover,.nav button:hover{
       border-color:var(--border-strong);background:#fff7eb;transform:translateY(-1px);
@@ -127,6 +128,7 @@
     .section-head svg{
       width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.9;
       stroke-linecap:round;stroke-linejoin:round;
+      overflow:visible;flex-shrink:0;
     }
     .tab-panel{display:none}
     .tab-panel.active{display:block}
@@ -193,28 +195,120 @@
     .table-wrap{
       margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:auto;background:#fff;
     }
-    table{width:100%;border-collapse:collapse;min-width:860px}
+    table{width:100%;border-collapse:collapse;min-width:760px}
     th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px;vertical-align:top}
     th{
       font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
       color:var(--muted);letter-spacing:.8px;background:#fffaf2;position:sticky;top:0;z-index:1;
     }
     .row-form{
-      display:grid;grid-template-columns:1.3fr 1.3fr 1fr 110px 1fr auto;gap:8px;align-items:center
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
+      gap:8px;
+      align-items:center;
     }
+    .row-form > *{min-width:0}
     .row-form input{
+      width:100%;
       padding:8px;border:1px solid #d8cdbd;border-radius:8px;font-family:'Outfit',sans-serif
     }
+    .row-form label{white-space:nowrap}
+    .row-form .btn{justify-self:start;white-space:nowrap}
+    .dispatchers-top{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .dispatchers-top p{margin:0;color:var(--muted);font-size:14px}
+    .dispatcher-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
+      gap:10px;
+    }
+    .dispatcher-card{
+      background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px;
+      box-shadow:var(--shadow-sm);
+    }
+    .dispatcher-user{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;
+    }
+    .dispatcher-name{font-size:19px;font-weight:900;line-height:1.05;margin:0 0 4px}
+    .dispatcher-sub{font-size:13px;color:var(--muted);line-height:1.4}
+    .dispatcher-pill{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+      border-radius:999px;padding:4px 8px;border:1px solid #d8cdbd;
+      background:#fffaf2;color:#7a6a50;
+      white-space:nowrap;
+    }
+    .dispatcher-pill.off{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+    .dispatcher-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .dispatcher-actions .btn{display:inline-flex;align-items:center;gap:6px}
+    .dispatcher-actions .btn svg{
+      width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;overflow:visible;
+    }
+    .btn.warn{background:#fff7ed;border-color:#fdba74;color:#c2410c}
+    .btn.warn:hover{background:#ffedd5}
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(18,12,8,.35);
+      display:none;align-items:center;justify-content:center;
+      z-index:1200;padding:14px;
+    }
+    .modal-backdrop.show{display:flex}
+    .modal{
+      width:min(560px, 100%);
+      background:#fff;border:1px solid var(--border);
+      border-radius:16px;box-shadow:0 18px 42px rgba(0,0,0,.22);
+      overflow:hidden;
+    }
+    .modal-head{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:12px 14px;border-bottom:1px solid var(--border);background:#fffaf2;
+    }
+    .modal-title{margin:0;font-size:1.08rem}
+    .modal-close{
+      border:1px solid #d8cdbd;background:#fff;border-radius:9px;
+      padding:6px 10px;cursor:pointer;font-weight:700;
+    }
+    .modal-close:hover{background:#fff7eb}
+    .modal-form{padding:13px 14px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .modal-field{display:flex;flex-direction:column;gap:5px}
+    .modal-field label{
+      font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+      color:var(--muted2);font-family:'JetBrains Mono',monospace;
+    }
+    .modal-field input{width:100%;padding:10px;border:1px solid #d8cdbd;border-radius:9px;font-family:'Outfit',sans-serif}
+    .modal-check{grid-column:1 / -1;display:flex;align-items:center;gap:8px;color:var(--text2);font-weight:600}
+    .modal-actions{grid-column:1 / -1;display:flex;justify-content:flex-end;gap:8px;padding-top:2px}
+    .delete-body{padding:14px}
+    .delete-body p{margin:0 0 10px;color:var(--text2)}
+    .delete-username{font-weight:900}
     @media(max-width:1120px){
       .stats{grid-template-columns:1fr 1fr}
       .chart-grid{grid-template-columns:1fr}
-      .row-form{grid-template-columns:1fr}
+      .row-form{grid-template-columns:1fr 1fr}
     }
     @media(max-width:860px){
       .layout{flex-direction:column}
       .side{width:100%;height:auto;position:static}
       .main{padding:14px}
       .stats{grid-template-columns:1fr}
+      .nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .nav-item,.nav button{padding:13px 12px;font-size:14px}
+      .brand-wrap{margin-bottom:10px}
+    }
+    @media(max-width:560px){
+      .main{padding:10px}
+      .section{padding:12px;border-radius:16px}
+      .top{padding:10px 11px}
+      .top h1{font-size:1.22rem}
+      .kpi .v{font-size:24px}
+      .chart-canvas{height:220px !important;max-height:220px}
+      .chart-canvas.compact{height:200px !important;max-height:200px}
+      .nav{grid-template-columns:1fr}
+      .nav-item,.nav button{padding:12px 11px}
+      .row-form{grid-template-columns:1fr}
+      .modal-form{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -330,43 +424,45 @@
           <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0M4.5 20.25a7.5 7.5 0 0 1 15 0"/></svg>
           Dispatchers
         </h2>
-        <form method="post" action="/admin/dispatchers">
-          <div class="row-form" style="margin-bottom:10px">
-            <input name="username" placeholder="Username" required>
-            <input name="fullName" placeholder="Full name">
-            <input name="phone" placeholder="Phone">
-            <span></span>
-            <input name="password" type="password" placeholder="Password (min 6)" required>
-            <button class="btn primary" type="submit">Add</button>
-          </div>
-        </form>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Account</th><th>Edit</th></tr></thead>
-            <tbody>
-              <% dispatchers.forEach(function(d){ %>
-              <tr>
-                <td>
-                  <div><strong><%= d.username %></strong> <%= d.isActive ? '' : '(inactive)' %></div>
-                  <div style="font-size:12px;color:#6f644f"><%= d.fullName || '-' %> • <%= d.phone || '-' %></div>
-                </td>
-                <td>
-                  <form class="row-form" method="post" action="/admin/dispatchers/<%= d._id %>/update">
-                    <input name="username" value="<%= d.username %>" required>
-                    <input name="fullName" value="<%= d.fullName || '' %>" placeholder="Full name">
-                    <input name="phone" value="<%= d.phone || '' %>" placeholder="Phone">
-                    <label style="font-size:12px"><input type="checkbox" name="isActive" <%= d.isActive ? 'checked' : '' %>> Active</label>
-                    <input name="newPassword" type="password" placeholder="New password (optional)">
-                    <button class="btn" type="submit">Save</button>
-                  </form>
-                  <form method="post" action="/admin/dispatchers/<%= d._id %>/delete" onsubmit="return confirm('Delete dispatcher <%= d.username %>?');" style="margin-top:8px">
-                    <button class="btn" type="submit">Delete</button>
-                  </form>
-                </td>
-              </tr>
-              <% }) %>
-            </tbody>
-          </table>
+        <div class="dispatchers-top">
+          <p>Manage dispatcher accounts with quick actions.</p>
+          <button class="btn primary" type="button" id="openAddDispatcher">Add Dispatcher</button>
+        </div>
+        <div class="dispatcher-grid">
+          <% dispatchers.forEach(function(d){ %>
+          <article class="dispatcher-card">
+            <div class="dispatcher-user">
+              <div>
+                <h3 class="dispatcher-name"><%= d.username %></h3>
+                <div class="dispatcher-sub"><%= d.fullName || '-' %> - <%= d.phone || '-' %></div>
+              </div>
+              <span class="dispatcher-pill <%= d.isActive ? '' : 'off' %>"><%= d.isActive ? 'Active' : 'Inactive' %></span>
+            </div>
+            <div class="dispatcher-actions">
+              <button
+                class="btn"
+                type="button"
+                data-action="edit-dispatcher"
+                data-id="<%= d._id %>"
+                data-username="<%= d.username %>"
+                data-fullname="<%= d.fullName || '' %>"
+                data-phone="<%= d.phone || '' %>"
+                data-active="<%= d.isActive ? '1' : '0' %>">
+                <svg viewBox="0 0 24 24"><path d="m16.862 4.487 2.651 2.651M9 20.25H4.5v-4.5L14.69 5.56a1.875 1.875 0 0 1 2.652 0l1.098 1.098a1.875 1.875 0 0 1 0 2.652Z"/></svg>
+                Edit
+              </button>
+              <button
+                class="btn warn"
+                type="button"
+                data-action="delete-dispatcher"
+                data-id="<%= d._id %>"
+                data-username="<%= d.username %>">
+                <svg viewBox="0 0 24 24"><path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+                Delete
+              </button>
+            </div>
+          </article>
+          <% }) %>
         </div>
       </section>
 
@@ -394,6 +490,87 @@
       </section>
     </main>
   </div>
+
+  <div id="addDispatcherModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addDispatcherTitle">
+      <div class="modal-head">
+        <h3 class="modal-title" id="addDispatcherTitle">Add Dispatcher</h3>
+        <button class="modal-close" type="button" data-close-modal="#addDispatcherModal">Close</button>
+      </div>
+      <form class="modal-form" method="post" action="/admin/dispatchers">
+        <div class="modal-field">
+          <label for="addUsername">Username</label>
+          <input id="addUsername" name="username" required>
+        </div>
+        <div class="modal-field">
+          <label for="addFullName">Full name</label>
+          <input id="addFullName" name="fullName">
+        </div>
+        <div class="modal-field">
+          <label for="addPhone">Phone</label>
+          <input id="addPhone" name="phone">
+        </div>
+        <div class="modal-field">
+          <label for="addPassword">Password</label>
+          <input id="addPassword" name="password" type="password" minlength="6" required>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-close-modal="#addDispatcherModal">Cancel</button>
+          <button class="btn primary" type="submit">Add Dispatcher</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editDispatcherModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editDispatcherTitle">
+      <div class="modal-head">
+        <h3 class="modal-title" id="editDispatcherTitle">Edit Dispatcher</h3>
+        <button class="modal-close" type="button" data-close-modal="#editDispatcherModal">Close</button>
+      </div>
+      <form id="editDispatcherForm" class="modal-form" method="post" action="/admin/dispatchers/__id__/update">
+        <div class="modal-field">
+          <label for="editUsername">Username</label>
+          <input id="editUsername" name="username" required>
+        </div>
+        <div class="modal-field">
+          <label for="editFullName">Full name</label>
+          <input id="editFullName" name="fullName">
+        </div>
+        <div class="modal-field">
+          <label for="editPhone">Phone</label>
+          <input id="editPhone" name="phone">
+        </div>
+        <div class="modal-field">
+          <label for="editNewPassword">New password (optional)</label>
+          <input id="editNewPassword" name="newPassword" type="password" minlength="6">
+        </div>
+        <label class="modal-check"><input id="editIsActive" type="checkbox" name="isActive"> Active dispatcher</label>
+        <div class="modal-actions">
+          <button class="btn" type="button" data-close-modal="#editDispatcherModal">Cancel</button>
+          <button class="btn primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="deleteDispatcherModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteDispatcherTitle">
+      <div class="modal-head">
+        <h3 class="modal-title" id="deleteDispatcherTitle">Delete Dispatcher</h3>
+        <button class="modal-close" type="button" data-close-modal="#deleteDispatcherModal">Close</button>
+      </div>
+      <div class="delete-body">
+        <p>You are about to delete <span id="deleteDispatcherName" class="delete-username">this dispatcher</span>. This action cannot be undone.</p>
+        <form id="deleteDispatcherForm" method="post" action="/admin/dispatchers/__id__/delete">
+          <div class="modal-actions" style="padding-top:0">
+            <button class="btn" type="button" data-close-modal="#deleteDispatcherModal">Cancel</button>
+            <button class="btn warn" type="submit">Delete Dispatcher</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
   <script id="reportsSeed" type="application/json"><%- JSON.stringify(reports) %></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -410,6 +587,59 @@
       panels.forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
     }
     navItems.forEach(n => n.addEventListener('click', () => showTab(n.dataset.tab)));
+
+    function openModal(sel) {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      el.classList.add('show');
+      el.setAttribute('aria-hidden', 'false');
+    }
+    function closeModal(sel) {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      el.classList.remove('show');
+      el.setAttribute('aria-hidden', 'true');
+    }
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-modal')));
+    });
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal('#' + backdrop.id);
+      });
+    });
+    document.getElementById('openAddDispatcher')?.addEventListener('click', () => openModal('#addDispatcherModal'));
+
+    const editForm = document.getElementById('editDispatcherForm');
+    const deleteForm = document.getElementById('deleteDispatcherForm');
+    const deleteName = document.getElementById('deleteDispatcherName');
+    document.querySelectorAll('[data-action="edit-dispatcher"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        if (!id || !editForm) return;
+        editForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/update';
+        document.getElementById('editUsername').value = btn.getAttribute('data-username') || '';
+        document.getElementById('editFullName').value = btn.getAttribute('data-fullname') || '';
+        document.getElementById('editPhone').value = btn.getAttribute('data-phone') || '';
+        document.getElementById('editNewPassword').value = '';
+        document.getElementById('editIsActive').checked = btn.getAttribute('data-active') === '1';
+        openModal('#editDispatcherModal');
+      });
+    });
+    document.querySelectorAll('[data-action="delete-dispatcher"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const username = btn.getAttribute('data-username') || 'this dispatcher';
+        if (!id || !deleteForm) return;
+        deleteForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/delete';
+        if (deleteName) deleteName.textContent = username;
+        openModal('#deleteDispatcherModal');
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('.modal-backdrop.show').forEach(m => closeModal('#' + m.id));
+    });
 
     function safeArr(v){ return Array.isArray(v) ? v : []; }
 

@@ -43,7 +43,7 @@
       --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;}
     ::-webkit-scrollbar{width:5px;height:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:99px;}
 
     /* ── HEADER ── */
@@ -379,14 +379,44 @@
     .edit-btn.save{background:linear-gradient(135deg,var(--amber),var(--amber-dark));border-color:transparent;color:#fff;}
     .edit-btn.save:hover{box-shadow:0 4px 14px rgba(245,158,11,.3);}
 
+    @media(max-width:1024px){
+      .header{padding:0 .95rem;height:60px}
+      .main-inner{padding:1rem 1rem 2rem}
+      .sidebar{width:220px}
+      .rcard{padding:1.1rem 1.05rem}
+    }
     @media(max-width:768px){
       body{overflow:auto;height:auto;}
       .body{flex-direction:column;}
       .sidebar{width:100%;height:auto;}
+      .sidebar-top,.sidebar-footer{padding:.9rem .85rem}
       .filter-list{flex-direction:row;flex-wrap:wrap;padding:.6rem;}
-      .filter-item{flex:1;min-width:100px;}
+      .filter-item{flex:1;min-width:124px;padding:.65rem .72rem}
       .main{overflow:visible;}
+      .main-inner{padding:.85rem .75rem 1.5rem}
+      .main-title{font-size:1.3rem}
+      .header-right{gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
+      .nav-btn{padding:.34rem .62rem;font-size:.72rem}
+      .rcard-top{flex-direction:column;align-items:stretch}
+      .rcard-right{justify-content:flex-start}
+      .rcard-loc{gap:.55rem}
       .rcard-map-canvas{height:250px;}
+    }
+    @media(max-width:520px){
+      .header{height:auto;padding:.62rem .65rem;align-items:flex-start;gap:.6rem;flex-direction:column}
+      .header-right{width:100%}
+      .brand-name{font-size:.9rem}
+      .filter-item{min-width:46%}
+      .fi-icon{width:30px;height:30px}
+      .fi-label{font-size:.78rem}
+      .rcard{padding:.92rem .82rem}
+      .rcard-type{gap:6px}
+      .type-name{font-size:.9rem}
+      .rcard-meta{font-size:.66rem;gap:.58rem}
+      .status-pill{font-size:.56rem}
+      .edit-actions{flex-direction:column}
+      .edit-btn{width:100%;text-align:center}
+      .toast{left:.5rem;right:.5rem;max-width:none;width:auto}
     }
   </style>
 </head>
