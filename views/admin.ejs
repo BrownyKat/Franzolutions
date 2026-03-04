@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f3ece3;
+      --card:#ffffff;
+      --card-soft:#fffaf3;
+      --border:#e2d4c3;
+      --border-strong:#cfbca7;
+      --text:#1f180f;
+      --muted:#6f624f;
+      --muted2:#9a8b75;
+      --amber:#d97706;
+      --amber-soft:#ffedd5;
+      --amber-strong:#9a3412;
+      --blue:#1d4ed8;
+      --green:#059669;
+      --red:#b91c1c;
+      --shadow-sm:0 2px 8px rgba(0,0,0,.05);
+      --shadow-md:0 10px 24px rgba(0,0,0,.08);
+      --r-md:12px;
+      --r-lg:16px;
+      --r-xl:20px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:'Outfit',sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 520px at 90% -10%, #ffe8bf 0%, transparent 58%),
+        radial-gradient(600px 360px at -10% 110%, #e4f3ff 0%, transparent 60%),
+        var(--bg);
+    }
+    .layout{display:flex;min-height:100vh}
+    .side{
+      width:288px;flex-shrink:0;
+      background:linear-gradient(180deg,#fffdfa,#fff8ef);
+      border-right:1px solid var(--border);
+      padding:16px 14px;
+      position:sticky;top:0;height:100vh;overflow:auto;
+    }
+    .brand-wrap{
+      border:1px solid var(--border);
+      border-radius:var(--r-lg);
+      background:#fff;
+      padding:12px 12px 11px;
+      box-shadow:var(--shadow-sm);
+      margin-bottom:12px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:10px;
+      font-weight:900;font-size:20px;line-height:1.1;
+    }
+    .brand-badge{
+      width:36px;height:36px;border-radius:10px;
+      background:linear-gradient(145deg,#f59e0b,#d97706);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-weight:900;
+      box-shadow:0 6px 16px rgba(217,119,6,.35);
+      font-family:'JetBrains Mono',monospace;
+      letter-spacing:.5px;
+      flex-shrink:0;
+    }
+    .sub{
+      font-size:12px;color:var(--muted);margin-top:6px;
+    }
+    .nav-title{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2);
+      margin:10px 4px 8px;
+    }
+    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav-item,.nav button{
+      display:flex;align-items:center;gap:10px;width:100%;
+      text-align:left;text-decoration:none;
+      background:#fff;border:1px solid var(--border);
+      border-radius:12px;padding:11px 12px;
+      color:var(--text);font-weight:700;cursor:pointer;
+      transition:.18s ease;
+      font-family:'Outfit',sans-serif;
+    }
+    .nav-item svg,.nav button svg{
+      width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
+    }
+    .nav-item:hover,.nav button:hover{
+      border-color:var(--border-strong);background:#fff7eb;transform:translateY(-1px);
+    }
+    .nav-item.active{
+      background:linear-gradient(180deg,#fff8ed,#ffefdb);
+      border-color:#f4c99c;color:var(--amber-strong);
+      box-shadow:0 0 0 2px rgba(217,119,6,.10) inset;
+    }
+    .main{flex:1;min-width:0;padding:22px}
+    .top{
+      display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+      padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-sm);
+    }
+    .top h1{margin:0;font-size:1.5rem;letter-spacing:-.5px}
+    .chip{
+      display:inline-flex;align-items:center;gap:7px;
+      font-size:12px;color:var(--muted);
+      background:#fff;border:1px solid var(--border);
+      padding:8px 11px;border-radius:999px;text-decoration:none;font-weight:700;
+    }
+    .chip svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
+    .msg{padding:11px 12px;border-radius:10px;margin-top:12px;font-size:13px;font-weight:600}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+    .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    .section{
+      margin-top:16px;background:var(--card-soft);
+      border:1px solid var(--border);border-radius:var(--r-xl);
+      padding:16px;box-shadow:var(--shadow-md);
+    }
+    .section-head{
+      display:flex;align-items:center;gap:9px;
+      margin:0 0 10px;font-size:1.35rem;letter-spacing:-.4px;
+    }
+    .section-head svg{
+      width:22px;height:22px;stroke:var(--amber);fill:none;stroke-width:1.9;
+      stroke-linecap:round;stroke-linejoin:round;
+    }
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+    .kpi{
+      border:1px solid var(--border);
+      border-radius:14px;padding:14px 12px;background:#fff;
+      box-shadow:var(--shadow-sm);
+      position:relative;overflow:hidden;
+    }
+    .kpi::before{
+      content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px;background:#eab308;
+    }
+    .kpi:nth-child(2)::before{background:var(--blue)}
+    .kpi:nth-child(3)::before{background:var(--green)}
+    .kpi:nth-child(4)::before{background:#7c3aed}
+    .kpi .k{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:700;letter-spacing:.8px
+    }
+    .kpi .v{font-size:30px;font-weight:900;margin-top:4px;line-height:1}
+    .chart-grid{
+      margin-top:12px;
+      display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:11px;
+    }
+    .chart-card{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+      box-shadow:var(--shadow-sm);
+    }
+    .chart-title{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted2);font-weight:700;
+      margin-bottom:10px;
+    }
+    .chart-canvas{
+      width:100%;
+      height:250px !important;
+      max-height:250px;
+      display:block;
+    }
+    .chart-canvas.compact{height:220px !important;max-height:220px}
+    .filters{
+      display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;
+      padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;
+    }
+    .filters .f{display:flex;flex-direction:column;gap:4px}
+    .filters label{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.8px
+    }
+    .filters input{
+      padding:9px;border:1px solid #d8cdbd;border-radius:8px;font-family:'Outfit',sans-serif
+    }
+    .btn{
+      padding:9px 12px;border:1px solid #d8cdbd;border-radius:9px;background:#fff;
+      cursor:pointer;font-weight:700;text-decoration:none;color:#1f1a12;font-family:'Outfit',sans-serif
+    }
+    .btn:hover{border-color:var(--border-strong);background:#fff7eb}
+    .btn.primary{background:var(--amber);border-color:var(--amber);color:#fff}
+    .btn.primary:hover{background:#b45309}
+    .table-wrap{
+      margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:auto;background:#fff;
+    }
+    table{width:100%;border-collapse:collapse;min-width:860px}
+    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px;vertical-align:top}
+    th{
+      font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;
+      color:var(--muted);letter-spacing:.8px;background:#fffaf2;position:sticky;top:0;z-index:1;
+    }
+    .row-form{
+      display:grid;grid-template-columns:1.3fr 1.3fr 1fr 110px 1fr auto;gap:8px;align-items:center
+    }
+    .row-form input{
+      padding:8px;border:1px solid #d8cdbd;border-radius:8px;font-family:'Outfit',sans-serif
+    }
+    @media(max-width:1120px){
+      .stats{grid-template-columns:1fr 1fr}
+      .chart-grid{grid-template-columns:1fr}
+      .row-form{grid-template-columns:1fr}
+    }
+    @media(max-width:860px){
+      .layout{flex-direction:column}
+      .side{width:100%;height:auto;position:static}
+      .main{padding:14px}
+      .stats{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="side">
+      <div class="brand-wrap">
+        <div class="brand">
+          <span class="brand-badge">AD</span>
+          <span>Admin Dashboard</span>
+        </div>
+        <div class="sub"><%= currentUser && (currentUser.fullName || currentUser.username) %></div>
+      </div>
+      <div class="nav-title">Navigation</div>
+      <nav class="nav">
+        <button class="nav-item active" type="button" data-tab="dashboard">
+          <svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg> Dashboard
+        </button>
+        <button class="nav-item" type="button" data-tab="reports">
+          <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25"/></svg> Reports
+        </button>
+        <button class="nav-item" type="button" data-tab="dispatchers">
+          <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0M4.5 20.25a7.5 7.5 0 0 1 15 0"/></svg> Dispatchers
+        </button>
+        <button class="nav-item" type="button" data-tab="audit">
+          <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg> Audit Trail
+        </button>
+        <form method="get" action="/admin/logout" style="margin:0">
+          <button type="submit">
+            <svg viewBox="0 0 24 24"><path d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3-3-3-3m3 3-3 3m3-3H9"/></svg>
+            Logout
+          </button>
+        </form>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="top">
+        <h1>Admin Console</h1>
+      </div>
+
+      <% if (success) { %><div class="msg ok"><%= success %></div><% } %>
+      <% if (error) { %><div class="msg err"><%= error %></div><% } %>
+
+      <section class="section tab-panel active" id="dashboard" data-panel="dashboard">
+        <h2 class="section-head">
+          <svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          Dashboard
+        </h2>
+        <div class="stats">
+          <div class="kpi"><div class="k">Reports (Filtered)</div><div class="v"><%= stats.totalReports %></div></div>
+          <div class="kpi"><div class="k">Dispatchers</div><div class="v"><%= stats.totalDispatchers %></div></div>
+          <div class="kpi"><div class="k">Active Dispatchers</div><div class="v"><%= stats.activeDispatchers %></div></div>
+          <div class="kpi"><div class="k">Audit Entries</div><div class="v"><%= stats.auditCount %></div></div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-card">
+            <div class="chart-title">Reports Trend (Daily)</div>
+            <canvas id="trendChart" class="chart-canvas"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">Emergency Level</div>
+            <canvas id="severityChart" class="chart-canvas compact"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title">False Reports</div>
+            <canvas id="falseChart" class="chart-canvas compact"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <section class="section tab-panel" id="reports" data-panel="reports">
+        <h2 class="section-head">
+          <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25"/></svg>
+          Reports
+        </h2>
+        <form class="filters" method="get" action="/admin">
+          <div class="f">
+            <label for="from">From</label>
+            <input id="from" type="date" name="from" value="<%= from || '' %>">
+          </div>
+          <div class="f">
+            <label for="to">To</label>
+            <input id="to" type="date" name="to" value="<%= to || '' %>">
+          </div>
+          <button class="btn" type="submit">Apply</button>
+          <a class="btn" href="/admin">Reset</a>
+          <a class="btn" href="/admin/reports/export.xls?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
+          <a class="btn" href="/admin/reports/export.pdf?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Reporter</th><th>Location</th><th>Timestamp</th></tr></thead>
+            <tbody>
+              <% reports.forEach(function(r){ %>
+              <tr>
+                <td><%= r.reportId || r._id %></td>
+                <td><%= r.emergencyType || '-' %></td>
+                <td><%= r.status || '-' %></td>
+                <td><%= r.severity || '-' %></td>
+                <td><%= r.name || '-' %><br><span style="font-size:12px;color:#6f644f"><%= r.contact || '-' %></span></td>
+                <td><%= [r.street, r.landmark, r.barangay].filter(Boolean).join(', ') || '-' %></td>
+                <td><%= new Date(r.timestamp).toLocaleString() %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section tab-panel" id="dispatchers" data-panel="dispatchers">
+        <h2 class="section-head">
+          <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0M4.5 20.25a7.5 7.5 0 0 1 15 0"/></svg>
+          Dispatchers
+        </h2>
+        <form method="post" action="/admin/dispatchers">
+          <div class="row-form" style="margin-bottom:10px">
+            <input name="username" placeholder="Username" required>
+            <input name="fullName" placeholder="Full name">
+            <input name="phone" placeholder="Phone">
+            <span></span>
+            <input name="password" type="password" placeholder="Password (min 6)" required>
+            <button class="btn primary" type="submit">Add</button>
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Account</th><th>Edit</th></tr></thead>
+            <tbody>
+              <% dispatchers.forEach(function(d){ %>
+              <tr>
+                <td>
+                  <div><strong><%= d.username %></strong> <%= d.isActive ? '' : '(inactive)' %></div>
+                  <div style="font-size:12px;color:#6f644f"><%= d.fullName || '-' %> • <%= d.phone || '-' %></div>
+                </td>
+                <td>
+                  <form class="row-form" method="post" action="/admin/dispatchers/<%= d._id %>/update">
+                    <input name="username" value="<%= d.username %>" required>
+                    <input name="fullName" value="<%= d.fullName || '' %>" placeholder="Full name">
+                    <input name="phone" value="<%= d.phone || '' %>" placeholder="Phone">
+                    <label style="font-size:12px"><input type="checkbox" name="isActive" <%= d.isActive ? 'checked' : '' %>> Active</label>
+                    <input name="newPassword" type="password" placeholder="New password (optional)">
+                    <button class="btn" type="submit">Save</button>
+                  </form>
+                  <form method="post" action="/admin/dispatchers/<%= d._id %>/delete" onsubmit="return confirm('Delete dispatcher <%= d.username %>?');" style="margin-top:8px">
+                    <button class="btn" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section tab-panel" id="audit" data-panel="audit">
+        <h2 class="section-head">
+          <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+          Audit Trail (Dispatcher Actions)
+        </h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Timestamp</th><th>Dispatcher</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+            <tbody>
+              <% auditLogs.forEach(function(a){ %>
+              <tr>
+                <td><%= new Date(a.timestamp).toLocaleString() %></td>
+                <td><%= a.actorName || a.actorId || '-' %></td>
+                <td><%= a.action || '-' %></td>
+                <td><%= a.targetType || '-' %> <%= a.targetId || '' %></td>
+                <td><%= a.details || '-' %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script id="reportsSeed" type="application/json"><%- JSON.stringify(reports) %></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted) {
+        window.location.replace('/login');
+      }
+    });
+
+    const navItems = Array.from(document.querySelectorAll('.nav-item[data-tab]'));
+    const panels = Array.from(document.querySelectorAll('.tab-panel[data-panel]'));
+    function showTab(tab) {
+      navItems.forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+    }
+    navItems.forEach(n => n.addEventListener('click', () => showTab(n.dataset.tab)));
+
+    function safeArr(v){ return Array.isArray(v) ? v : []; }
+
+    let reportsData = [];
+    try {
+      reportsData = JSON.parse(document.getElementById('reportsSeed').textContent || '[]');
+    } catch (_e) { reportsData = []; }
+    reportsData = safeArr(reportsData);
+
+    const typeCounts = {};
+    const sevCounts = { Low: 0, Medium: 0, High: 0 };
+    let falseCount = 0;
+
+    reportsData.forEach(r => {
+      const type = String((r && r.emergencyType) || 'Unknown').trim() || 'Unknown';
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+
+      const sev = String((r && r.severity) || '').trim();
+      if (sevCounts[sev] !== undefined) sevCounts[sev] += 1;
+
+      if (String((r && r.status) || '') === 'false-report') falseCount += 1;
+    });
+
+    if (window.Chart) {
+      const byDay = {};
+      reportsData.forEach(r => {
+        const d = new Date(r && r.timestamp);
+        if (Number.isNaN(d.getTime())) return;
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        byDay[key] = (byDay[key] || 0) + 1;
+      });
+      const trendEntries = Object.entries(byDay).sort((a,b) => a[0].localeCompare(b[0]));
+      new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+          labels: trendEntries.map(x => x[0]),
+          datasets: [{
+            label: 'Reports',
+            data: trendEntries.map(x => x[1]),
+            borderColor: '#d97706',
+            backgroundColor: 'rgba(217,119,6,0.16)',
+            pointBackgroundColor: '#d97706',
+            pointRadius: 3,
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#6f624f' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: '#6f624f' } }
+          }
+        }
+      });
+
+      new Chart(document.getElementById('severityChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Low', 'Medium', 'High'],
+          datasets: [{
+            label: 'Count',
+            data: [sevCounts.Low, sevCounts.Medium, sevCounts.High],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#6f624f' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: '#6f624f' } }
+          }
+        }
+      });
+
+      const total = reportsData.length;
+      new Chart(document.getElementById('falseChart'), {
+        type: 'pie',
+        data: {
+          labels: ['False Reports', 'Other Reports'],
+          datasets: [{ data: [falseCount, Math.max(0, total - falseCount)], backgroundColor: ['#ef4444', '#e5dccf'] }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#6f624f' } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
