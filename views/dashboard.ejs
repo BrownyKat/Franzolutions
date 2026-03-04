@@ -43,7 +43,7 @@
       --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;height:100vh;min-height:100svh;display:flex;flex-direction:column;overflow:hidden;}
     ::-webkit-scrollbar{width:5px;height:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:99px;}
 
     /* ── HEADER ── */
@@ -91,11 +91,11 @@
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
     /* ── BODY LAYOUT ── */
-    .body{display:flex;flex:1;overflow:hidden;}
+    .body{display:flex;flex:1;min-height:0;overflow:hidden;}
 
     /* ── SIDEBAR ── */
     .sidebar{
-      width:252px;flex-shrink:0;
+      width:312px;flex-shrink:0;
       background:var(--surface);
       border-right:1px solid var(--border);
       display:flex;flex-direction:column;
@@ -147,8 +147,8 @@
     .sidebar-footer strong{color:var(--muted);}
 
     /* ── MAIN ── */
-    .main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
-    .main-inner{padding:1.5rem 1.5rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
+    .main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;}
+    .main-inner{padding:1.5rem 1.75rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
 
     .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
     .main-title{font-weight:900;font-size:1.55rem;letter-spacing:-.75px;line-height:1.1;}
@@ -379,14 +379,52 @@
     .edit-btn.save{background:linear-gradient(135deg,var(--amber),var(--amber-dark));border-color:transparent;color:#fff;}
     .edit-btn.save:hover{box-shadow:0 4px 14px rgba(245,158,11,.3);}
 
-    @media(max-width:768px){
-      body{overflow:auto;height:auto;}
-      .body{flex-direction:column;}
-      .sidebar{width:100%;height:auto;}
-      .filter-list{flex-direction:row;flex-wrap:wrap;padding:.6rem;}
-      .filter-item{flex:1;min-width:100px;}
+    @media(max-width:1200px){
+      .sidebar{width:284px;}
+      .main-inner{padding:1.25rem 1.25rem 2.5rem;}
+    }
+
+    @media(max-width:960px){
+      body{overflow:auto;}
+      .header{height:auto;padding:.7rem .9rem;align-items:flex-start;gap:.65rem;flex-wrap:wrap;}
+      .header-right{width:100%;justify-content:flex-start;flex-wrap:wrap;}
+      .body{flex-direction:column;overflow:visible;}
+      .sidebar{width:100%;height:auto;border-right:0;border-bottom:1px solid var(--border);}
+      .sidebar-top,.sidebar-footer{padding:.85rem .9rem;}
+      .filter-list{
+        flex-direction:row;
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        overflow-y:hidden;
+        gap:.5rem;
+        padding:.65rem .85rem;
+      }
+      .filter-item{min-width:178px;flex:0 0 auto;}
       .main{overflow:visible;}
-      .rcard-map-canvas{height:250px;}
+    }
+
+    @media(max-width:768px){
+      .main-inner{padding:1rem .85rem 2rem;}
+      .main-title{font-size:1.28rem;}
+      .main-sub{font-size:.73rem;}
+      .rcard{padding:1rem .92rem;border-radius:14px;}
+      .rcard-top{flex-direction:column;align-items:flex-start;gap:.65rem;}
+      .rcard-right{width:100%;justify-content:space-between;}
+      .rcard-meta{gap:.55rem;font-size:.66rem;}
+      .rcard-loc{gap:.6rem;font-size:.64rem;}
+      .rcard-actions{gap:.38rem;}
+      .act-btn{font-size:.72rem;padding:.38rem .7rem;}
+      .rcard-map-canvas{height:240px;}
+    }
+
+    @media(max-width:520px){
+      .brand-name{font-size:.87rem;}
+      .brand-sub{font-size:.5rem;}
+      .online-pill{display:none;}
+      .nav-btn{font-size:.72rem;padding:.32rem .62rem;}
+      .filter-item{min-width:158px;padding:.58rem .72rem;}
+      .fi-icon{width:30px;height:30px;}
+      .fi-label{font-size:.78rem;}
     }
   </style>
 </head>
@@ -491,7 +529,7 @@
     </div>
 
     <div class="sidebar-footer">
-      <p><strong>Real-time via Socket.IO.</strong><br>Citizen reports appear here instantly — no refresh needed.</p>
+      <p><strong>Real-time via Pusher.</strong><br>Citizen reports appear here instantly — no refresh needed.</p>
     </div>
   </aside>
 
@@ -560,7 +598,7 @@
 </div>
 
 <script id="initialReports" type="application/json"><%- JSON.stringify(reports) %></script>
-<script src="/socket.io/socket.io.js"></script>
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script>
   window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
@@ -568,7 +606,11 @@
     }
   });
 
-  const socket = io();
+  const realtimeCfg = <%- JSON.stringify(realtime || {}) %>;
+  const pusher = (realtimeCfg.key && realtimeCfg.cluster)
+    ? new Pusher(realtimeCfg.key, { cluster: realtimeCfg.cluster, forceTLS: true })
+    : null;
+  const channel = pusher ? pusher.subscribe(realtimeCfg.channel || 'mdrrmo-reports') : null;
   let reports = [];
   try {
     const seed = JSON.parse(document.getElementById('initialReports').textContent || '[]');
@@ -831,6 +873,12 @@
     if (changed) render();
   }
 
+  function handleUnauthorized(data) {
+    const msg = (data && data.error) ? String(data.error) : 'Session expired. Please log in again.';
+    toast_('Unauthorized', msg, 'warn');
+    setTimeout(() => window.location.assign('/dispatcher/login'), 650);
+  }
+
   async function updStatus(id, status) {
     if (!id) {
       toast_('Error', 'Missing report ID.', 'warn');
@@ -844,6 +892,10 @@
         body: JSON.stringify({status})
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Could not update status');
       const r = reports.find(x=>x.id===id);
       if (r) { r.status=status; render(); }
@@ -900,6 +952,10 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Could not update details');
 
       const idx = reports.findIndex(x => x.id === id);
@@ -925,6 +981,11 @@
     if (!reports.length) return;
     if (!confirm('Clear all reports? This cannot be undone.')) return;
     const res = await fetch('/api/reports',{method:'DELETE', credentials:'same-origin'});
+    if (res.status === 401) {
+      const data = await res.json().catch(() => ({}));
+      handleUnauthorized(data);
+      return;
+    }
     if (!res.ok) {
       const data = await res.json().catch(()=>({}));
       toast_('Error', data.error || 'Could not clear reports.', 'warn');
@@ -943,8 +1004,8 @@
     t._t=setTimeout(()=>t.classList.remove('show'),3600);
   }
 
-  // ── Socket.IO events ──
-  socket.on('new-report', r => {
+  // ── Realtime events ──
+  if (channel) channel.bind('new-report', r => {
     const nr = normalizeReport(r);
     reports.unshift(nr);
     render();
@@ -955,11 +1016,11 @@
       if (el){el.classList.add('card-flash');setTimeout(()=>el.classList.remove('card-flash'),1800);}
     });
   });
-  socket.on('report-updated', ({id,status}) => {
+  if (channel) channel.bind('report-updated', ({id,status}) => {
     const r=reports.find(x=>x.id===id);
     if (r){r.status=status;render();}
   });
-  socket.on('report-details-updated', updated => {
+  if (channel) channel.bind('report-details-updated', updated => {
     const u = normalizeReport(updated);
     const idx = reports.findIndex(x => x.id === u.id);
     if (idx >= 0) {
@@ -967,7 +1028,7 @@
       render();
     }
   });
-  socket.on('reports-cleared', ()=>{ reports=[]; render(); });
+  if (channel) channel.bind('reports-cleared', ()=>{ reports=[]; render(); });
 
   // initial render
   render();

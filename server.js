@@ -4,7 +4,7 @@ const express    = require('express');
 const http       = require('http');
 const https      = require('https');
 const crypto     = require('crypto');
-const { Server } = require('socket.io');
+const Pusher     = require('pusher');
 const path       = require('path');
 const mongoose   = require('mongoose');
 
@@ -13,20 +13,22 @@ const Counter     = require('./models/Counter');
 const Admin       = require('./models/Admin');
 const Dispatcher  = require('./models/Dispatcher');
 const AuditLog    = require('./models/AuditLog');
+const Session     = require('./models/Session');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server);
-const SESSIONS = new Map();
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
 const COOKIE_NAME = 'auth_token';
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of SESSIONS.entries()) {
-    if (!session || session.expiresAt < now) SESSIONS.delete(token);
-  }
-}, 1000 * 60 * 10).unref();
+const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
+const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
+  ? new Pusher({
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET,
+    cluster: process.env.PUSHER_CLUSTER,
+    useTLS: true,
+  })
+  : null;
 
 // ── Database connection ──────────────────────────────────────────────────────
 mongoose
@@ -35,24 +37,48 @@ mongoose
     console.log('  ✔  MongoDB connected');
     await ensureDefaultAdmin();
   })
-  .catch(err => { console.error('  ✘  MongoDB connection error:', err.message); process.exit(1); });
+  .catch(err => {
+    console.error('  ✘  MongoDB connection error:', err.message);
+    if (require.main === module) process.exit(1);
+  });
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const token = getCookie(req, COOKIE_NAME);
   if (!token) return next();
-  const session = SESSIONS.get(token);
-  if (!session || session.expiresAt < Date.now()) {
-    SESSIONS.delete(token);
-    clearSessionCookie(res);
-    return next();
+  try {
+    const session = await Session.findOne({ token }).lean();
+    if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
+      await Session.deleteOne({ token });
+      clearSessionCookie(res);
+      return next();
+    }
+
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+    await Session.updateOne({ token }, { $set: { expiresAt } });
+    req.auth = {
+      role: session.role,
+      userId: session.userId,
+      username: session.username,
+      fullName: session.fullName,
+      expiresAt: expiresAt.getTime(),
+    };
+    req.authToken = token;
+    res.locals.auth = req.auth;
+  } catch (err) {
+    console.error('[auth] session lookup failed:', err && err.message ? err.message : err);
   }
-  session.expiresAt = Date.now() + SESSION_TTL_MS;
-  req.auth = { ...session };
-  req.authToken = token;
-  res.locals.auth = req.auth;
+  next();
+});
+app.use((req, res, next) => {
+  res.locals.realtime = {
+    provider: 'pusher',
+    key: process.env.PUSHER_KEY || '',
+    cluster: process.env.PUSHER_CLUSTER || '',
+    channel: REALTIME_CHANNEL,
+  };
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
@@ -91,7 +117,7 @@ app.post('/login', async (req, res) => {
     if (!admin || !verifyPassword(password, admin.passwordHash)) {
       return res.status(401).render('login', { error: 'Invalid admin credentials.' });
     }
-    createSession(req, res, {
+    await createSession(req, res, {
       role: 'admin',
       userId: String(admin._id),
       username: admin.username,
@@ -123,7 +149,7 @@ app.post('/dispatcher/login', async (req, res) => {
       return res.status(401).render('dispatcher-login', { error: 'Invalid dispatcher credentials.' });
     }
 
-    createSession(req, res, {
+    await createSession(req, res, {
       role: 'dispatcher',
       userId: String(dispatcher._id),
       username: dispatcher.username,
@@ -146,7 +172,8 @@ app.post('/dispatcher/login', async (req, res) => {
 });
 
 app.get('/admin/login', (req, res) => {
-  return res.redirect('/login');
+  if (req.auth?.role === 'admin') return res.redirect('/admin');
+  res.render('admin-login', { error: '' });
 });
 
 app.post('/admin/login', async (req, res) => {
@@ -154,13 +181,13 @@ app.post('/admin/login', async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     if (!username || !password) {
-      return res.status(400).render('login', { error: 'Invalid login details.' });
+      return res.status(400).render('admin-login', { error: 'Invalid login details.' });
     }
     const admin = await Admin.findOne({ username });
     if (!admin || !verifyPassword(password, admin.passwordHash)) {
-      return res.status(401).render('login', { error: 'Invalid admin credentials.' });
+      return res.status(401).render('admin-login', { error: 'Invalid admin credentials.' });
     }
-    createSession(req, res, {
+    await createSession(req, res, {
       role: 'admin',
       userId: String(admin._id),
       username: admin.username,
@@ -169,33 +196,33 @@ app.post('/admin/login', async (req, res) => {
     return res.redirect('/admin');
   } catch (err) {
     console.error(err);
-    res.status(500).render('login', { error: 'Login failed. Please try again.' });
+    res.status(500).render('admin-login', { error: 'Login failed. Please try again.' });
   }
 });
 
-app.post('/logout', (req, res) => {
-  destroySession(req, res);
+app.post('/logout', async (req, res) => {
+  await destroySession(req, res);
   res.redirect('/login');
 });
 
-function handleAdminLogout(req, res) {
-  destroySession(req, res);
+async function handleAdminLogout(req, res) {
+  await destroySession(req, res);
   res.redirect('/login');
 }
 app.post('/admin/logout', handleAdminLogout);
 app.get('/admin/logout', handleAdminLogout);
 app.all('/admin/logout', handleAdminLogout);
 
-function handleDispatcherLogout(req, res) {
-  destroySession(req, res);
+async function handleDispatcherLogout(req, res) {
+  await destroySession(req, res);
   res.redirect('/dispatcher/login');
 }
 app.post('/dispatcher/logout', handleDispatcherLogout);
 app.get('/dispatcher/logout', handleDispatcherLogout);
 app.all('/dispatcher/logout', handleDispatcherLogout);
 
-app.get('/logout', (req, res) => {
-  destroySession(req, res);
+app.get('/logout', async (req, res) => {
+  await destroySession(req, res);
   res.redirect('/login');
 });
 
@@ -246,10 +273,11 @@ app.post('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/lo
     dispatcher.phone = phone;
     await dispatcher.save();
 
-    const session = SESSIONS.get(req.authToken);
-    if (session) {
-      session.fullName = dispatcher.fullName || dispatcher.username;
-      SESSIONS.set(req.authToken, session);
+    if (req.authToken) {
+      await Session.updateOne(
+        { token: req.authToken },
+        { $set: { fullName: dispatcher.fullName || dispatcher.username } }
+      );
     }
 
     await logAudit({
@@ -411,8 +439,8 @@ app.post('/api/report', async (req, res) => {
     const reportId = `RPT-${String(seq).padStart(4, '0')}`;
 
     const report = await Report.create({
-      reportId,
       ...req.body,
+      reportId,
       status:      'new',
       timestamp:   new Date(),
       credibility: computeCredibility(req.body),
@@ -420,7 +448,7 @@ app.post('/api/report', async (req, res) => {
     });
 
     const payload = report.toJSON();
-    io.emit('new-report', payload);
+    await emitRealtime('new-report', payload);
     res.json({ success: true, id: reportId });
   } catch (err) {
     console.error(err);
@@ -477,7 +505,7 @@ app.post('/api/panic', async (req, res) => {
     });
 
     const payload = report.toJSON();
-    io.emit('new-report', payload);
+    await emitRealtime('new-report', payload);
     res.json({ success: true, id: reportId });
   } catch (err) {
     console.error(err);
@@ -504,7 +532,7 @@ app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), as
       targetId: report.reportId || String(report._id),
       details: `Set status to ${report.status}`,
     });
-    io.emit('report-updated', { id: report.reportId || String(report._id), status: report.status });
+    await emitRealtime('report-updated', { id: report.reportId || String(report._id), status: report.status });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -559,7 +587,7 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
     });
 
     const payload = report.toJSON();
-    io.emit('report-details-updated', payload);
+    await emitRealtime('report-details-updated', payload);
     res.json({ success: true, report: payload });
   } catch (err) {
     console.error(err);
@@ -582,7 +610,7 @@ app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req
       targetId: '*',
       details: `Cleared ${beforeCount} reports`,
     });
-    io.emit('reports-cleared');
+    await emitRealtime('reports-cleared', {});
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -759,16 +787,29 @@ function getCookie(req, name) {
   const parts = raw.split(';');
   for (const part of parts) {
     const [k, ...rest] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(rest.join('=') || '');
+    if (k === name) {
+      try {
+        return decodeURIComponent(rest.join('=') || '');
+      } catch (_e) {
+        return rest.join('=') || '';
+      }
+    }
   }
   return '';
 }
 
-function createSession(req, res, payload) {
+async function createSession(req, res, payload) {
   const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
-  if (currentToken) SESSIONS.delete(currentToken);
+  if (currentToken) await Session.deleteOne({ token: currentToken });
   const token = crypto.randomBytes(24).toString('hex');
-  SESSIONS.set(token, { ...payload, expiresAt: Date.now() + SESSION_TTL_MS });
+  await Session.create({
+    token,
+    role: payload.role,
+    userId: payload.userId,
+    username: payload.username,
+    fullName: payload.fullName,
+    expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+  });
   res.cookie(COOKIE_NAME, token, {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
@@ -785,9 +826,9 @@ function clearSessionCookie(res) {
   });
 }
 
-function destroySession(req, res) {
+async function destroySession(req, res) {
   const token = req.authToken || getCookie(req, COOKIE_NAME);
-  if (token) SESSIONS.delete(token);
+  if (token) await Session.deleteOne({ token });
   clearSessionCookie(res);
 }
 
@@ -949,6 +990,15 @@ function buildSimplePdf(lines) {
   return Buffer.from(body, 'utf8');
 }
 
+async function emitRealtime(eventName, payload) {
+  if (!pusher) return;
+  try {
+    await pusher.trigger(REALTIME_CHANNEL, eventName, payload);
+  } catch (e) {
+    console.error('[realtime] failed to publish:', e && e.message ? e.message : e);
+  }
+}
+
 async function logAudit(entry) {
   try {
     if (!entry) return;
@@ -967,19 +1017,19 @@ async function logAudit(entry) {
   }
 }
 
-// ── Socket.IO ────────────────────────────────────────────────────────────────
-io.on('connection', socket => {
-  console.log(`[socket] connected     ${socket.id}`);
-  socket.on('disconnect', () => console.log(`[socket] disconnected  ${socket.id}`));
-});
+// ── Realtime (Pusher) ────────────────────────────────────────────────────────
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
-  console.log(`  Reporter        -> http://localhost:${PORT}/report`);
-  console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
-  console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
-  console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
-  console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
+    console.log(`  Reporter        -> http://localhost:${PORT}/report`);
+    console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
+    console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
+    console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
+    console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
+  });
+}
+
+module.exports = app;
