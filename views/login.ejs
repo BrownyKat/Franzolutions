@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - FRANZOLUTIONS</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f5f2ec;color:#1f1a12;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .card{width:min(420px,92vw);background:#fff;border:1px solid #e3d8c8;border-radius:14px;padding:24px;box-shadow:0 12px 28px rgba(0,0,0,.08)}
+    h1{margin:0 0 8px;font-size:24px}
+    p{margin:0 0 18px;color:#6f644f;font-size:14px}
+    label{display:block;font-size:12px;font-weight:700;margin:10px 0 6px;text-transform:uppercase;color:#6f644f}
+    input,select{width:100%;padding:11px;border:1px solid #d8cdbd;border-radius:10px;font-size:14px;box-sizing:border-box}
+    .btn{margin-top:14px;width:100%;padding:12px;border:0;border-radius:10px;background:#d97706;color:#fff;font-weight:700;cursor:pointer}
+    .err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:10px;border-radius:10px;margin-bottom:12px;font-size:13px}
+    .hint{margin-top:12px;font-size:12px;color:#8a7d67}
+  </style>
+</head>
+<body>
+  <form class="card" method="post" action="/login">
+    <h1>Admin Login</h1>
+    <p>Sign in to access the admin console.</p>
+    <% if (error) { %><div class="err"><%= error %></div><% } %>
+    <label for="username">Username</label>
+    <input id="username" name="username" required autocomplete="username">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required autocomplete="current-password">
+    <button class="btn" type="submit">Login</button>
+    <div class="hint">Default admin is configurable via `ADMIN_USERNAME` / `ADMIN_PASSWORD` in `.env`.</div>
+  </form>
+</body>
+</html>
