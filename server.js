@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const express    = require('express');
 const http       = require('http');
@@ -28,16 +28,18 @@ setInterval(() => {
   }
 }, 1000 * 60 * 10).unref();
 
-// ── Database connection ──────────────────────────────────────────────────────
+// â”€â”€ Database connection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 mongoose
   .connect(process.env.MONGODB_URI)
+  .then(() => console.log('  âœ”  MongoDB connected'))
+  .catch(err => { console.error('  âœ˜  MongoDB connection error:', err.message); process.exit(1); });
   .then(async () => {
     console.log('  ✔  MongoDB connected');
     await ensureDefaultAdmin();
   })
   .catch(err => { console.error('  ✘  MongoDB connection error:', err.message); process.exit(1); });
 
-// ── Middleware ───────────────────────────────────────────────────────────────
+// â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
@@ -59,6 +61,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// â”€â”€ Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+app.get('/', (_req, res) => res.render('index'));
 // Prevent cached protected pages from showing after logout (back button issue).
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -211,6 +215,7 @@ app.get('/dashboard', requireRolesPage(['dispatcher'], '/dispatcher/login'), asy
   }
 });
 
+// â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/login'), async (req, res) => {
   try {
     const dispatcher = await Dispatcher.findById(req.auth.userId).lean();
@@ -428,7 +433,7 @@ app.post('/api/report', async (req, res) => {
   }
 });
 
-// ── API: Panic SOS ───────────────────────────────────────────────────────────
+// â”€â”€ API: Panic SOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/panic', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('panic');
@@ -475,7 +480,6 @@ app.post('/api/panic', async (req, res) => {
       isPanic:       true,
       timestamp:     new Date(),
     });
-
     const payload = report.toJSON();
     io.emit('new-report', payload);
     res.json({ success: true, id: reportId });
@@ -485,6 +489,8 @@ app.post('/api/panic', async (req, res) => {
   }
 });
 
+// â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+app.patch('/api/report/:id/status', async (req, res) => {
 // ── API: update status ───────────────────────────────────────────────────────
 app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
   try {
@@ -567,6 +573,54 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
   }
 });
 
+// API: update reporter details
+app.patch('/api/report/:id/details', async (req, res) => {
+  try {
+    const allowedFields = ['name', 'contact', 'emergencyType', 'severity', 'barangay', 'landmark', 'street', 'description', 'gps'];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates[field] = String(req.body[field] ?? '').trim();
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: 'No editable fields provided' });
+    }
+
+    const where = reportLookupQuery(req.params.id);
+    const current = await Report.findOne(where);
+    if (!current) return res.status(404).json({ error: 'Not found' });
+
+    const merged = {
+      name: current.name,
+      contact: current.contact,
+      landmark: current.landmark,
+      description: current.description,
+      photo: current.photo,
+      gps: current.gps,
+      ...updates,
+    };
+    updates.credibility = computeCredibility(merged);
+
+    const report = await Report.findOneAndUpdate(
+      where,
+      updates,
+      { new: true }
+    );
+
+    const payload = report.toJSON();
+    io.emit('report-details-updated', payload);
+    res.json({ success: true, report: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not update report details' });
+  }
+});
+
+// â”€â”€ API: delete all reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+app.delete('/api/reports', async (_req, res) => {
 // ── API: delete all reports ──────────────────────────────────────────────────
 app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req, res) => {
   try {
@@ -590,7 +644,7 @@ app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req
   }
 });
 
-// ── API: list all reports (JSON) ─────────────────────────────────────────────
+// â”€â”€ API: list all reports (JSON) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reports', async (_req, res) => {
   try {
     const reports = await Report.find().sort({ timestamp: -1 }).lean({ virtuals: true });
@@ -601,7 +655,7 @@ app.get('/api/reports', async (_req, res) => {
   }
 });
 
-// ── API: reverse geocode GPS to location labels ──────────────────────────────
+// â”€â”€ API: reverse geocode GPS to location labels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reverse-geocode', async (req, res) => {
   try {
     const lat = Number(req.query.lat);
@@ -621,7 +675,7 @@ app.get('/api/reverse-geocode', async (req, res) => {
   }
 });
 
-// ── Helper: credibility score ─────────────────────────────────────────────────
+// â”€â”€ Helper: credibility score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function computeCredibility({ name, contact, landmark, description, photo, gps }) {
   let score = 0;
   if (name        && name.trim().split(' ').length >= 2) score += 25;
@@ -633,7 +687,16 @@ function computeCredibility({ name, contact, landmark, description, photo, gps }
   return score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
 }
 
-function pickFirst(parts) {
+function parseGpsString(gps) {
+  const s = String(gps || '');
+  const m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}function pickFirst(parts) {
   for (const p of parts) {
     if (p && String(p).trim()) return String(p).trim();
   }
@@ -753,6 +816,7 @@ function httpsGetJson(url, headers = {}) {
   });
 }
 
+// â”€â”€ Socket.IO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function getCookie(req, name) {
   const raw = String((req && req.headers && req.headers.cookie) || '');
   if (!raw) return '';
@@ -973,13 +1037,16 @@ io.on('connection', socket => {
   socket.on('disconnect', () => console.log(`[socket] disconnected  ${socket.id}`));
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
+  console.log(`  Reporter  â†’  http://localhost:${PORT}/report`);
+  console.log(`  Dashboard â†’  http://localhost:${PORT}/dashboard\n`);
   console.log(`  Reporter        -> http://localhost:${PORT}/report`);
   console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
   console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
   console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
   console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
 });
+
