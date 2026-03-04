@@ -863,9 +863,7 @@
   <div><strong id="toastTitle"></strong><span id="toastMsg"></span></div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket = io();
   let selType_ = '', selSev_ = '', photoData = null;
   let panicNum = '';
   try { panicNum = localStorage.getItem('mdrrmo_panic') || ''; } catch(e) {}

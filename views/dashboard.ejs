@@ -99,11 +99,11 @@
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
     /* ── BODY LAYOUT ── */
-    .body{display:flex;flex:1;overflow:hidden;}
+    .body{display:flex;flex:1;min-height:0;overflow:hidden;}
 
     /* ── SIDEBAR ── */
     .sidebar{
-      width:252px;flex-shrink:0;
+      width:312px;flex-shrink:0;
       background:var(--surface);
       border-right:1px solid var(--border);
       display:flex;flex-direction:column;
@@ -159,8 +159,8 @@
     .sidebar-footer strong{color:var(--muted);}
 
     /* ── MAIN ── */
-    .main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
-    .main-inner{padding:1.5rem 1.5rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
+    .main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;}
+    .main-inner{padding:1.5rem 1.75rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
 
     .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
     .main-title{font-weight:900;font-size:1.55rem;letter-spacing:-.75px;line-height:1.1;}
@@ -595,7 +595,7 @@
     </div>
 
     <div class="sidebar-footer">
-      <p><strong>Real-time via Socket.IO.</strong><br>Citizen reports appear here instantly — no refresh needed.</p>
+      <p><strong>Real-time via Pusher.</strong><br>Citizen reports appear here instantly — no refresh needed.</p>
     </div>
   </aside>
 
@@ -725,7 +725,11 @@
     }
   });
 
-  const socket = io();
+  const realtimeCfg = <%- JSON.stringify(realtime || {}) %>;
+  const pusher = (realtimeCfg.key && realtimeCfg.cluster)
+    ? new Pusher(realtimeCfg.key, { cluster: realtimeCfg.cluster, forceTLS: true })
+    : null;
+  const channel = pusher ? pusher.subscribe(realtimeCfg.channel || 'mdrrmo-reports') : null;
   let reports = [];
   try {
     const seed = JSON.parse(document.getElementById('initialReports').textContent || '[]');
@@ -1231,6 +1235,12 @@
     if (changed) render();
   }
 
+  function handleUnauthorized(data) {
+    const msg = (data && data.error) ? String(data.error) : 'Session expired. Please log in again.';
+    toast_('Unauthorized', msg, 'warn');
+    setTimeout(() => window.location.assign('/dispatcher/login'), 650);
+  }
+
   async function updStatus(id, status) {
     if (!id) {
       toast_('Error', 'Missing report ID.', 'warn');
@@ -1244,6 +1254,10 @@
         body: JSON.stringify({status})
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Could not update status');
       const r = reports.find(x=>x.id===id);
       if (r) { r.status=status; lastReportsSig = reportsSignature(reports); render(); }
@@ -1300,6 +1314,10 @@
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Could not update details');
 
       const idx = reports.findIndex(x => x.id === id);
@@ -1347,6 +1365,11 @@
     await fetch('/api/reports',{method:'DELETE'});
     reports=[]; lastReportsSig = reportsSignature(reports); render();
     const res = await fetch('/api/reports',{method:'DELETE', credentials:'same-origin'});
+    if (res.status === 401) {
+      const data = await res.json().catch(() => ({}));
+      handleUnauthorized(data);
+      return;
+    }
     if (!res.ok) {
       const data = await res.json().catch(()=>({}));
       toast_('Error', data.error || 'Could not clear reports.', 'warn');
@@ -1365,8 +1388,8 @@
     t._t=setTimeout(()=>t.classList.remove('show'),3600);
   }
 
-  // ── Socket.IO events ──
-  socket.on('new-report', r => {
+  // ── Realtime events ──
+  if (channel) channel.bind('new-report', r => {
     const nr = normalizeReport(r);
     reports.unshift(nr);
     lastReportsSig = reportsSignature(reports);
@@ -1378,11 +1401,11 @@
       if (el){el.classList.add('card-flash');setTimeout(()=>el.classList.remove('card-flash'),1800);}
     });
   });
-  socket.on('report-updated', ({id,status}) => {
+  if (channel) channel.bind('report-updated', ({id,status}) => {
     const r=reports.find(x=>x.id===id);
     if (r){r.status=status;lastReportsSig = reportsSignature(reports);render();}
   });
-  socket.on('report-details-updated', updated => {
+  if (channel) channel.bind('report-details-updated', updated => {
     const u = normalizeReport(updated);
     const idx = reports.findIndex(x => x.id === u.id);
     if (idx >= 0) {

@@ -15,6 +15,10 @@
     .msg{padding:10px;border-radius:9px;margin-top:12px;font-size:13px}
     .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
     .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    @media (max-width:560px){
+      .wrap{margin:16px auto;padding:0 12px}
+      .card{padding:14px}
+    }
   </style>
 </head>
 <body>
@@ -49,12 +53,5 @@
       <button class="btn primary" type="submit">Save Profile</button>
     </form>
   </div>
-  <script>
-    window.addEventListener('pageshow', function (event) {
-      if (event.persisted) {
-        window.location.replace('/dispatcher/login');
-      }
-    });
-  </script>
 </body>
 </html>
