@@ -70,7 +70,7 @@ app.post('/api/report', async (req, res) => {
 app.post('/api/panic', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('panic');
-    const reportId = SOS-;
+    const reportId = `SOS-${String(seq).padStart(4, '0')}`;
     const parsedGps = parseGpsString(req.body.gps);
     let resolvedBarangay = '';
     let resolvedLandmark = '';
@@ -91,7 +91,7 @@ app.post('/api/panic', async (req, res) => {
       barangay:      resolvedBarangay || 'Unknown - GPS only',
       landmark:      resolvedLandmark || req.body.gps || 'GPS unavailable',
       street:        '',
-      description:   INSTANT PANIC ALERT - Caller needs immediate callback. GPS: ,
+      description:   `INSTANT PANIC ALERT - Caller needs immediate callback. GPS: ${req.body.gps || 'unavailable'}`,
       gps:           req.body.gps || '',
       photo:         null,
       status:        'new',

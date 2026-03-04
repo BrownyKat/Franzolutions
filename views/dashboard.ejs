@@ -131,9 +131,12 @@
     .fi-icon svg{width:17px;height:17px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
     .fi-all    .fi-icon{background:#F5F0E8;} .fi-all    .fi-icon svg{stroke:var(--muted);}
     .fi-new    .fi-icon{background:var(--red-light);}    .fi-new    .fi-icon svg{stroke:var(--red);}
+    .fi-sos    .fi-icon{background:var(--red-light);}    .fi-sos    .fi-icon svg{stroke:var(--red);}
+    .fi-report .fi-icon{background:var(--blue-light);}   .fi-report .fi-icon svg{stroke:var(--blue);}
     .fi-verify .fi-icon{background:var(--amber-light);}  .fi-verify .fi-icon svg{stroke:var(--amber-dark);}
     .fi-disp   .fi-icon{background:var(--orange-light);} .fi-disp   .fi-icon svg{stroke:var(--orange);}
     .fi-res    .fi-icon{background:var(--green-light);}  .fi-res    .fi-icon svg{stroke:var(--green);}
+    .fi-false  .fi-icon{background:#F5F0E8;}             .fi-false  .fi-icon svg{stroke:var(--muted);}
     .fi-all.active    .fi-icon{background:var(--amber-light);} .fi-all.active    .fi-icon svg{stroke:var(--amber-dark);}
 
     .fi-label{font-weight:600;font-size:.84rem;color:var(--text2);flex:1;}
@@ -143,9 +146,12 @@
       font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.92rem;min-width:22px;text-align:right;
     }
     .fi-new .fi-count{color:var(--red);}
+    .fi-sos .fi-count{color:var(--red);}
+    .fi-report .fi-count{color:var(--blue);}
     .fi-verify .fi-count{color:var(--amber-dark);}
     .fi-disp .fi-count{color:var(--orange);}
     .fi-res .fi-count{color:var(--green);}
+    .fi-false .fi-count{color:var(--muted);}
     .fi-all .fi-count{color:var(--muted);}
 
     .sidebar-footer{padding:1rem 1.1rem;border-top:1px solid var(--border);}
@@ -159,6 +165,20 @@
     .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
     .main-title{font-weight:900;font-size:1.55rem;letter-spacing:-.75px;line-height:1.1;}
     .main-sub{font-size:.78rem;color:var(--muted);margin-top:3px;}
+    .main-quick-filters{display:flex;gap:.5rem;margin-top:.65rem;flex-wrap:wrap;}
+    .quick-filter-btn{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:.42rem .8rem;border-radius:999px;
+      border:1.5px solid var(--border-mid);background:var(--surface);
+      color:var(--text2);font-family:'Outfit',sans-serif;font-size:.74rem;font-weight:700;
+      cursor:pointer;transition:all .18s;
+    }
+    .quick-filter-btn:hover{border-color:var(--amber-border);background:var(--amber-light);color:var(--amber-dark);}
+    .quick-filter-btn.active{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-deep);}
+    .quick-count{
+      font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:800;line-height:1;
+      padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid var(--border);
+    }
     .main-head-tools{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem;justify-content:flex-end;}
     .main-datetime{
       display:flex;align-items:center;gap:10px;
@@ -233,6 +253,23 @@
     .cred-high  {color:var(--green);background:var(--green-light);border:1px solid var(--green-border);}
     .cred-medium{color:var(--amber-dark);background:var(--amber-light);border:1px solid var(--amber-border);}
     .cred-low   {color:var(--red);background:var(--red-light);border:1px solid var(--red-border);}
+    .trust-pill{
+      display:inline-flex;align-items:center;gap:3px;
+      font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;
+      padding:2px 7px;border-radius:99px;text-transform:uppercase;
+      border:1px solid transparent;
+    }
+    .trust-trustworthy{color:var(--green);background:var(--green-light);border-color:var(--green-border);}
+    .trust-neutral{color:var(--blue);background:var(--blue-light);border-color:var(--blue-border);}
+    .trust-verify{color:var(--amber-dark);background:var(--amber-light);border-color:var(--amber-border);}
+    .trust-no{color:var(--red);background:var(--red-light);border-color:var(--red-border);}
+    .prank-warning{
+      flex-basis:100%;
+      font-size:.72rem;
+      color:var(--red);
+      font-weight:700;
+      margin-top:2px;
+    }
 
     .rcard-meta{
       display:flex;gap:1rem;flex-wrap:wrap;
@@ -353,6 +390,54 @@
     .toast svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;margin-top:1px;}
     .toast strong{display:block;font-weight:700;font-size:.82rem;color:var(--text);margin-bottom:1px;}
     .toast span{font-size:.74rem;color:var(--text2);}
+/* edit modal */
+    .edit-backdrop{
+      position:fixed;inset:0;z-index:950;
+      background:rgba(24,18,10,.34);
+      backdrop-filter:blur(2px);
+      display:none;align-items:center;justify-content:center;
+      padding:1rem;
+    }
+    .edit-backdrop.show{display:flex;}
+    .edit-modal{
+      width:min(560px,100%);
+      background:var(--surface);
+      border:1.5px solid var(--border);
+      border-radius:var(--r-lg);
+      box-shadow:var(--shadow-xl);
+      overflow:hidden;
+    }
+    .edit-head{
+      display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+      padding:1rem 1.1rem;
+      border-bottom:1px solid var(--border);
+      background:var(--surface2);
+    }
+    .edit-title{font-size:.92rem;font-weight:800;color:var(--text);}
+    .edit-close{
+      border:1px solid var(--border-mid);background:var(--surface);color:var(--text2);
+      border-radius:8px;padding:.3rem .55rem;cursor:pointer;font-weight:700;
+    }
+    .edit-close:hover{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-dark);}
+    .edit-form{padding:1rem 1.1rem 1.1rem;display:grid;gap:.78rem;}
+    .edit-field label{
+      display:block;margin-bottom:.3rem;font-size:.72rem;font-weight:700;color:var(--text2);
+      font-family:'JetBrains Mono',monospace;letter-spacing:.45px;text-transform:uppercase;
+    }
+    .edit-field input{
+      width:100%;padding:.64rem .72rem;border-radius:10px;
+      border:1.5px solid var(--border);background:var(--bg);color:var(--text);
+      font-family:'Outfit',sans-serif;font-size:.88rem;
+    }
+    .edit-field input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.13);background:var(--surface);}
+    .edit-actions{display:flex;justify-content:flex-end;gap:.55rem;padding:.2rem 1.1rem 1.1rem;}
+    .edit-btn{
+      border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text2);
+      border-radius:10px;padding:.5rem .9rem;cursor:pointer;font-weight:700;font-size:.8rem;
+    }
+    .edit-btn:hover{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-dark);}
+    .edit-btn.save{background:linear-gradient(135deg,var(--amber),var(--amber-dark));border-color:transparent;color:#fff;}
+    .edit-btn.save:hover{box-shadow:0 4px 14px rgba(245,158,11,.3);}
 
     @media(max-width:768px){
       body{overflow:auto;height:auto;}
@@ -445,6 +530,14 @@
         <span class="fi-count" id="cRes">0</span>
       </div>
 
+      <div class="filter-item fi-false" onclick="setFilter('false-report',this)">
+        <div class="fi-icon">
+          <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        </div>
+        <span class="fi-label">False</span>
+        <span class="fi-count" id="cFalse">0</span>
+      </div>
+
     </div>
 
     <div class="sidebar-footer">
@@ -460,6 +553,16 @@
         <div>
           <div class="main-title">Live Dispatch Console</div>
           <div class="main-sub">Real-time emergency report management</div>
+          <div class="main-quick-filters">
+            <button class="quick-filter-btn" type="button" onclick="setFilter('sos',this)">
+              SOS
+              <span class="quick-count" id="cSos">0</span>
+            </button>
+            <button class="quick-filter-btn" type="button" onclick="setFilter('report',this)">
+              Report
+              <span class="quick-count" id="cReport">0</span>
+            </button>
+          </div>
         </div>
         <div class="main-head-tools">
           <div class="main-datetime" id="dateTimeText">
@@ -481,9 +584,45 @@
 </div>
 
 <!-- TOAST -->
+
 <div class="toast" id="toast">
   <svg viewBox="0 0 24 24"><path d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
   <div><strong id="toastTitle"></strong><span id="toastMsg"></span></div>
+</div>
+<!-- EDIT NAME/LOCATION MODAL -->
+<div class="edit-backdrop" id="editBackdrop" onclick="if(event.target===this) closeEditModal()">
+  <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="edit-head">
+      <div class="edit-title" id="editTitle">Edit Reporter Name & Location</div>
+      <button class="edit-close" type="button" onclick="closeEditModal()">Close</button>
+    </div>
+    <form class="edit-form" id="editForm">
+      <div class="edit-field">
+        <label for="editName">Reporter Name</label>
+        <input id="editName" name="name" type="text" maxlength="120">
+      </div>
+      <div class="edit-field">
+        <label for="editBarangay">Barangay</label>
+        <input id="editBarangay" name="barangay" type="text" maxlength="120">
+      </div>
+      <div class="edit-field">
+        <label for="editLandmark">Landmark</label>
+        <input id="editLandmark" name="landmark" type="text" maxlength="140">
+      </div>
+      <div class="edit-field">
+        <label for="editStreet">Street</label>
+        <input id="editStreet" name="street" type="text" maxlength="140">
+      </div>
+      <div class="edit-field">
+        <label for="editGps">GPS (lat,lng)</label>
+        <input id="editGps" name="gps" type="text" maxlength="60" placeholder="e.g. 14.609100,121.022300">
+      </div>
+    </form>
+    <div class="edit-actions">
+      <button class="edit-btn" type="button" onclick="closeEditModal()">Cancel</button>
+      <button class="edit-btn save" type="button" onclick="saveEditDetails()">Save Changes</button>
+    </div>
+  </div>
 </div>
 
 <script id="initialReports" type="application/json"><%- JSON.stringify(reports) %></script>
@@ -596,19 +735,53 @@
     }, { enableHighAccuracy: false, timeout: 10000 });
   }
 
+  function isSosReport(r) {
+    return r && (r.emergencyType === 'PANIC SOS' || r.severity === 'High');
+  }
+
+  function isRegularReport(r) {
+    return r && (r.severity === 'Medium' || r.severity === 'Low');
+  }
+
+  function getFalseCountByContact(contact) {
+    const c = String(contact || '').trim();
+    if (!c) return 0;
+    return reports.filter(r => String(r.contact || '').trim() === c && r.status === 'false-report').length;
+  }
+
+  function trustMeter(falseCount) {
+    if (falseCount <= 0) return { label: 'Trustworthy', className: 'trust-trustworthy' };
+    if (falseCount <= 5) return { label: 'Neutral', className: 'trust-neutral' };
+    if (falseCount <= 10) return { label: 'Need Verification', className: 'trust-verify' };
+    return { label: 'No Trust Credentials', className: 'trust-no' };
+  }
+
   function counts() {
     document.getElementById('cAll').textContent   = reports.length;
     document.getElementById('cNew').textContent    = reports.filter(r=>r.status==='new').length;
+    document.getElementById('cSos').textContent    = reports.filter(isSosReport).length;
+    document.getElementById('cReport').textContent = reports.filter(isRegularReport).length;
     document.getElementById('cVerify').textContent = reports.filter(r=>r.status==='verifying').length;
     document.getElementById('cDisp').textContent   = reports.filter(r=>r.status==='dispatched').length;
     document.getElementById('cRes').textContent    = reports.filter(r=>r.status==='resolved').length;
+    document.getElementById('cFalse').textContent  = reports.filter(r=>r.status==='false-report').length;
   }
 
   function setFilter(f, el) {
     curFilter = f;
     document.querySelectorAll('.filter-item').forEach(x=>x.classList.remove('active'));
-    el.classList.add('active');
-    const labels = {all:'All Reports',new:'New Reports',verifying:'Verifying',dispatched:'Dispatched',resolved:'Resolved'};
+    document.querySelectorAll('.quick-filter-btn').forEach(x=>x.classList.remove('active'));
+    if (el && el.classList) el.classList.add('active');
+    const labels = {
+      all:'All Reports',
+      new:'New Reports',
+      sos:'SOS / High Severity',
+      report:'Medium + Low Reports',
+      verifying:'Verifying',
+      dispatched:'Dispatched',
+      resolved:'Resolved',
+      ['false-report']:'False Reports'
+    };
     document.getElementById('filterLabel').textContent = labels[f] || f;
     render();
   }
@@ -619,6 +792,8 @@
     const ico = typeIcons[r.emergencyType] || typeIcons.Other;
     const sp  = r.status.replace('-','-');
     const gpsMap = gpsMapHTML(r);
+    const prankCount = getFalseCountByContact(r.contact);
+    const meter = trustMeter(prankCount);
     return `
     <div class="rcard sev-${r.severity}" id="card-${rid}">
       <div class="rcard-top">
@@ -627,6 +802,8 @@
             <div class="type-icon ${tc}">${ico}</div>
             <span class="type-name">${r.emergencyType}</span>
             <span class="cred-pill cred-${r.credibility}">${r.credibility === 'high' ? 'High Cred' : r.credibility === 'medium' ? 'Med Cred' : 'Low Cred'}</span>
+            <span class="trust-pill ${meter.className}">${meter.label} (${prankCount})</span>
+            ${prankCount > 0 ? `<span class="prank-warning">Warning: This number has committed ${prankCount} prank call/report${prankCount > 1 ? 's' : ''}.</span>` : ''}
           </div>
           <div class="rcard-meta">
             <span>
@@ -663,7 +840,7 @@
         </span>
         ${r.gps ? `<span>
           <svg viewBox="0 0 24 24"><path d="M9.348 14.651a3.75 3.75 0 0 1 0-5.303m5.304-.001a3.75 3.75 0 0 1 0 5.304m-7.425 2.122a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
-          ${r.gps}
+          ${gpsDisplayLabel(r)}
         </span>` : ''}
         <span>
           <svg viewBox="0 0 24 24"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
@@ -685,7 +862,7 @@
           <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           Resolved
         </button>` : ''}
-        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="updStatus('${r.id}','false-report')">
+        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="confirmFalseReport('${rid}','${r.emergencyType}')">
           <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           False Report
         </button>` : ''}
@@ -726,15 +903,95 @@
     `;
   }
 
+  function gpsDisplayLabel(r) {
+    const pretty = String(r.gpsResolvedText || '').trim();
+    if (pretty) return pretty;
+    const p = parseGps(r.gps);
+    if (!p) return String(r.gps || '');
+    if (r._gpsLookupPending) return 'Resolving location...';
+    return 'Resolving location...';
+  }
+
+  async function resolveGpsTextForReport(r) {
+    if (!r || r._gpsLookupDone || r._gpsLookupPending) return false;
+    const p = parseGps(r.gps);
+    if (!p) return false;
+    r._gpsLookupPending = true;
+    try {
+      const res = await fetch(`/api/reverse-geocode?lat=${encodeURIComponent(p.lat)}&lng=${encodeURIComponent(p.lng)}`);
+      if (!res.ok) throw new Error('reverse geocode failed');
+      const data = await res.json();
+      const parts = [data.barangay, data.landmark].filter(Boolean);
+      if (parts.length) {
+        r.gpsResolvedText = parts.join(', ');
+      } else {
+        r.gpsResolvedText = `Near ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+      }
+    } catch (_e) {
+      r.gpsResolvedText = `Near ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`;
+    } finally {
+      r._gpsLookupPending = false;
+      r._gpsLookupDone = true;
+    }
+    return true;
+  }
+
+  async function resolveGpsTexts(reportsToResolve) {
+    const jobs = reportsToResolve.map(resolveGpsTextForReport);
+    const results = await Promise.all(jobs);
+    return results.some(Boolean);
+  }
+
   function normalizeReport(r) {
     if (!r || typeof r !== 'object') return r;
-    return { ...r, id: r.id || r.reportId || '' };
+    return {
+      ...r,
+      id: r.id || r.reportId || '',
+      gpsResolvedText: r.gpsResolvedText || '',
+      _gpsLookupPending: false,
+      _gpsLookupDone: false
+    };
+  }
+
+  function reportsSignature(arr) {
+    return (arr || [])
+      .map(r => `${r.id || r.reportId || ''}|${r.status || ''}|${r.timestamp || ''}`)
+      .join('||');
+  }
+
+  let lastReportsSig = reportsSignature(reports);
+
+  async function syncReportsFromServer(forceRender = false) {
+    try {
+      const res = await fetch(`/api/reports?_=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const fresh = (Array.isArray(data) ? data : []).map(normalizeReport);
+      const sig = reportsSignature(fresh);
+      if (!forceRender && sig === lastReportsSig) return;
+      reports = fresh;
+      lastReportsSig = sig;
+      render();
+    } catch (_e) {}
   }
 
   function render() {
     counts();
     const list = document.getElementById('reportList');
-    const filtered = curFilter==='all' ? reports : reports.filter(r=>r.status===curFilter);
+    const existingMaps = new Map();
+    list.querySelectorAll('.rcard-map').forEach(mapNode => {
+      const card = mapNode.closest('.rcard');
+      if (!card || !card.id) return;
+      existingMaps.set(card.id, mapNode);
+    });
+
+    const filtered = curFilter === 'all'
+      ? reports
+      : curFilter === 'sos'
+        ? reports.filter(isSosReport)
+        : curFilter === 'report'
+          ? reports.filter(isRegularReport)
+          : reports.filter(r=>r.status===curFilter);
     if (!filtered.length) {
       list.innerHTML = `<div class="empty">
         <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg></div>
@@ -744,6 +1001,17 @@
       return;
     }
     list.innerHTML = filtered.map(cardHTML).join('');
+
+    // Reuse already-loaded map nodes so map iframes do not reload on data refresh.
+    existingMaps.forEach((oldMapNode, cardId) => {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      const freshMapNode = card.querySelector('.rcard-map');
+      if (!freshMapNode) return;
+      freshMapNode.replaceWith(oldMapNode);
+    });
+
+    resolveGpsTexts(filtered).then(changed => { if (changed) render(); });
   }
 
   async function updStatus(id, status) {
@@ -754,7 +1022,7 @@
     try {
       await fetch(`/api/report/${id}/status`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
       const r = reports.find(x=>x.id===id);
-      if (r) { r.status=status; render(); }
+      if (r) { r.status=status; lastReportsSig = reportsSignature(reports); render(); }
       const msgs = {verifying:'Calling reporter to verify…',dispatched:'Response team dispatched!',resolved:'Incident resolved.',['false-report']:'Flagged as false report.'};
       toast_(id, msgs[status]||'');
     } catch(e) { toast_('Error','Could not update status.','warn'); }
@@ -784,7 +1052,7 @@
     if (!reports.length) return;
     if (!confirm('Clear all reports? This cannot be undone.')) return;
     await fetch('/api/reports',{method:'DELETE'});
-    reports=[]; render();
+    reports=[]; lastReportsSig = reportsSignature(reports); render();
   }
 
   function toast_(title, msg, type='ok') {
@@ -801,6 +1069,7 @@
   socket.on('new-report', r => {
     const nr = normalizeReport(r);
     reports.unshift(nr);
+    lastReportsSig = reportsSignature(reports);
     render();
     toast_(nr.isPanic?'PANIC SOS':'New Report', `${nr.emergencyType} — ${nr.barangay}`);
     requestAnimationFrame(()=>{
@@ -810,12 +1079,22 @@
   });
   socket.on('report-updated', ({id,status}) => {
     const r=reports.find(x=>x.id===id);
-    if (r){r.status=status;render();}
+    if (r){r.status=status;lastReportsSig = reportsSignature(reports);render();}
   });
-  socket.on('reports-cleared', ()=>{ reports=[]; render(); });
+  socket.on('reports-cleared', ()=>{ reports=[]; lastReportsSig = reportsSignature(reports); render(); });
+  socket.on('connect', () => { void syncReportsFromServer(); });
+  socket.on('reconnect', () => { void syncReportsFromServer(); });
+  socket.on('disconnect', () => { void syncReportsFromServer(); });
+  socket.on('connect_error', () => { void syncReportsFromServer(); });
 
   // initial render
   render();
+  void syncReportsFromServer();
+  setInterval(() => { void syncReportsFromServer(); }, 2000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) void syncReportsFromServer();
+  });
+  window.addEventListener('focus', () => { void syncReportsFromServer(); });
   updateDateTime();
   setInterval(updateDateTime, 1000);
   loadWeather();
