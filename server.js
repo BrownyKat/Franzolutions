@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const express    = require('express');
 const http       = require('http');
@@ -30,19 +30,20 @@ const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.en
   })
   : null;
 
-// ── Database connection ──────────────────────────────────────────────────────
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('  ✔  MongoDB connected');
+// â”€â”€ Database connection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+async function initDatabase() {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('  âœ”  MongoDB connected');
     await ensureDefaultAdmin();
-  })
-  .catch(err => {
-    console.error('  ✘  MongoDB connection error:', err.message);
+  } catch (err) {
+    console.error('  âœ˜  MongoDB connection error:', err.message);
     if (require.main === module) process.exit(1);
-  });
+  }
+}
+void initDatabase();
 
-// ── Middleware ───────────────────────────────────────────────────────────────
+// â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(async (req, res, next) => {
@@ -93,7 +94,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Pages ────────────────────────────────────────────────────────────────────
+// â”€â”€ Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/', (req, res) => {
   if (!req.auth) return res.redirect('/report');
   if (req.auth.role === 'admin') return res.redirect('/admin');
@@ -432,7 +433,7 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
   }
 });
 
-// ── API: submit a normal report ──────────────────────────────────────────────
+// â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/report', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('report');
@@ -456,7 +457,7 @@ app.post('/api/report', async (req, res) => {
   }
 });
 
-// ── API: Panic SOS ───────────────────────────────────────────────────────────
+// â”€â”€ API: Panic SOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/panic', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('panic');
@@ -513,7 +514,7 @@ app.post('/api/panic', async (req, res) => {
   }
 });
 
-// ── API: update status ───────────────────────────────────────────────────────
+// â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
   try {
     const where = reportLookupQuery(req.params.id);
@@ -595,7 +596,7 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
   }
 });
 
-// ── API: delete all reports ──────────────────────────────────────────────────
+// â”€â”€ API: delete all reports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req, res) => {
   try {
     const beforeCount = await Report.countDocuments({});
@@ -618,7 +619,7 @@ app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req
   }
 });
 
-// ── API: list all reports (JSON) ─────────────────────────────────────────────
+// â”€â”€ API: list all reports (JSON) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reports', async (_req, res) => {
   try {
     const reports = await Report.find().sort({ timestamp: -1 }).lean({ virtuals: true });
@@ -629,7 +630,7 @@ app.get('/api/reports', async (_req, res) => {
   }
 });
 
-// ── API: reverse geocode GPS to location labels ──────────────────────────────
+// â”€â”€ API: reverse geocode GPS to location labels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/api/reverse-geocode', async (req, res) => {
   try {
     const lat = Number(req.query.lat);
@@ -649,7 +650,7 @@ app.get('/api/reverse-geocode', async (req, res) => {
   }
 });
 
-// ── Helper: credibility score ─────────────────────────────────────────────────
+// â”€â”€ Helper: credibility score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function computeCredibility({ name, contact, landmark, description, photo, gps }) {
   let score = 0;
   if (name        && name.trim().split(' ').length >= 2) score += 25;
@@ -872,7 +873,7 @@ async function ensureDefaultAdmin() {
   const existing = await Admin.findOne({ username }).lean();
   if (existing) return;
   await Admin.create({ username, fullName, passwordHash: hashPassword(password) });
-  console.log(`  ✔  Default admin created (${username})`);
+  console.log(`  âœ”  Default admin created (${username})`);
 }
 
 function buildReportDateRangeFilter(fromRaw, toRaw) {
@@ -1017,9 +1018,9 @@ async function logAudit(entry) {
   }
 }
 
-// ── Realtime (Pusher) ────────────────────────────────────────────────────────
+// â”€â”€ Realtime (Pusher) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PORT = process.env.PORT || 3000;
 if (require.main === module) {
   server.listen(PORT, () => {
@@ -1033,3 +1034,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
