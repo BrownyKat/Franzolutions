@@ -36,11 +36,12 @@ mongoose
   .then(async () => {
     console.log('  ✔  MongoDB connected');
     await ensureDefaultAdmin();
-  })
-  .catch(err => {
-    console.error('  ✘  MongoDB connection error:', err.message);
+  } catch (err) {
+    console.error('  âœ˜  MongoDB connection error:', err.message);
     if (require.main === module) process.exit(1);
-  });
+  }
+}
+void initDatabase();
 
 // â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.json({ limit: '10mb' }));
@@ -85,7 +86,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Pages ────────────────────────────────────────────────────────────────────
+// â”€â”€ Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.get('/', (req, res) => {
   if (!req.auth) return res.redirect('/report');
   if (req.auth.role === 'admin') return res.redirect('/admin');
@@ -425,7 +426,7 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
   }
 });
 
-// ── API: submit a normal report ──────────────────────────────────────────────
+// â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/report', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('report');
@@ -967,7 +968,7 @@ async function ensureDefaultAdmin() {
   const existing = await Admin.findOne({ username }).lean();
   if (existing) return;
   await Admin.create({ username, fullName, passwordHash: hashPassword(password) });
-  console.log(`  ✔  Default admin created (${username})`);
+  console.log(`  âœ”  Default admin created (${username})`);
 }
 
 function buildReportDateRangeFilter(fromRaw, toRaw) {
@@ -1112,7 +1113,7 @@ async function logAudit(entry) {
   }
 }
 
-// ── Realtime (Pusher) ────────────────────────────────────────────────────────
+// â”€â”€ Realtime (Pusher) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PORT = process.env.PORT || 3000;
