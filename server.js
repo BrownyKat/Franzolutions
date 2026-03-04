@@ -71,28 +71,42 @@ app.post('/api/panic', async (req, res) => {
   try {
     const seq      = await Counter.nextSeq('panic');
     const reportId = `SOS-${String(seq).padStart(4, '0')}`;
-    const parsedGps = parseGpsString(req.body.gps);
-    let resolvedBarangay = '';
-    let resolvedLandmark = '';
-    if (parsedGps) {
-      const primary = await reverseViaNominatim(parsedGps.lat, parsedGps.lng);
-      const fallback = (primary.barangay || primary.landmark)
-        ? { barangay: '', landmark: '' }
-        : await reverseViaBigDataCloud(parsedGps.lat, parsedGps.lng);
-      resolvedBarangay = pickFirst([primary.barangay, fallback.barangay]);
-      resolvedLandmark = pickFirst([primary.landmark, fallback.landmark]);
+    const gps = String(req.body.gps || '').trim();
+    let barangay = String(req.body.barangay || '').trim();
+    let landmark = String(req.body.landmark || '').trim();
+    let street = String(req.body.street || '').trim();
+
+    const coords = parseGpsCoords(gps);
+    if (coords && (!barangay || !landmark || !street)) {
+      const primary = await reverseViaNominatim(coords.lat, coords.lng);
+      let fallback = { barangay: '', landmark: '', street: '' };
+      if (!primary.barangay && !primary.landmark && !primary.street) {
+        fallback = await reverseViaBigDataCloud(coords.lat, coords.lng);
+      }
+      barangay = barangay || primary.barangay || fallback.barangay || '';
+      landmark = landmark || primary.landmark || fallback.landmark || '';
+      street = street || primary.street || fallback.street || '';
     }
+
+    const locationText = pickFirst([
+      [street, landmark, barangay].filter(Boolean).join(', '),
+      [landmark, barangay].filter(Boolean).join(', '),
+      barangay,
+      landmark,
+      'Location unavailable',
+    ]);
+
     const report = await Report.create({
       reportId,
       name:          'PANIC ALERT',
       contact:       req.body.contact,
       emergencyType: 'PANIC SOS',
       severity:      'High',
-      barangay:      resolvedBarangay || 'Unknown - GPS only',
-      landmark:      resolvedLandmark || req.body.gps || 'GPS unavailable',
-      street:        '',
-      description:   `INSTANT PANIC ALERT - Caller needs immediate callback. GPS: ${req.body.gps || 'unavailable'}`,
-      gps:           req.body.gps || '',
+      barangay:      barangay || 'Unknown location',
+      landmark:      landmark || 'Location unavailable',
+      street:        street,
+      description:   `INSTANT PANIC ALERT - Caller needs immediate callback. Location: ${locationText}`,
+      gps:           gps,
       photo:         null,
       status:        'new',
       credibility:   'high',
@@ -111,17 +125,110 @@ app.post('/api/panic', async (req, res) => {
 // â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.patch('/api/report/:id/status', async (req, res) => {
   try {
+    const where = reportLookupQuery(req.params.id);
     const report = await Report.findOneAndUpdate(
-      { reportId: req.params.id },
+      where,
       { status: req.body.status },
       { new: true }
     );
     if (!report) return res.status(404).json({ error: 'Not found' });
-    io.emit('report-updated', { id: report.reportId, status: report.status });
+    io.emit('report-updated', { id: report.reportId || String(report._id), status: report.status });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not update report' });
+  }
+});
+
+// API: update reporter details
+app.patch('/api/report/:id/details', async (req, res) => {
+  try {
+    const allowedFields = ['name', 'contact', 'emergencyType', 'severity', 'barangay', 'landmark', 'street', 'description', 'gps'];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates[field] = String(req.body[field] ?? '').trim();
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: 'No editable fields provided' });
+    }
+
+    const where = reportLookupQuery(req.params.id);
+    const current = await Report.findOne(where);
+    if (!current) return res.status(404).json({ error: 'Not found' });
+
+    const merged = {
+      name: current.name,
+      contact: current.contact,
+      landmark: current.landmark,
+      description: current.description,
+      photo: current.photo,
+      gps: current.gps,
+      ...updates,
+    };
+    updates.credibility = computeCredibility(merged);
+
+    const report = await Report.findOneAndUpdate(
+      where,
+      updates,
+      { new: true }
+    );
+
+    const payload = report.toJSON();
+    io.emit('report-details-updated', payload);
+    res.json({ success: true, report: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not update report details' });
+  }
+});
+
+// API: update reporter details
+app.patch('/api/report/:id/details', async (req, res) => {
+  try {
+    const allowedFields = ['name', 'contact', 'emergencyType', 'severity', 'barangay', 'landmark', 'street', 'description', 'gps'];
+    const updates = {};
+
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updates[field] = String(req.body[field] ?? '').trim();
+      }
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: 'No editable fields provided' });
+    }
+
+    const where = reportLookupQuery(req.params.id);
+    const current = await Report.findOne(where);
+    if (!current) return res.status(404).json({ error: 'Not found' });
+
+    const merged = {
+      name: current.name,
+      contact: current.contact,
+      landmark: current.landmark,
+      description: current.description,
+      photo: current.photo,
+      gps: current.gps,
+      ...updates,
+    };
+    updates.credibility = computeCredibility(merged);
+
+    const report = await Report.findOneAndUpdate(
+      where,
+      updates,
+      { new: true }
+    );
+
+    const payload = report.toJSON();
+    io.emit('report-details-updated', payload);
+    res.json({ success: true, report: payload });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not update report details' });
   }
 });
 
@@ -159,7 +266,7 @@ app.get('/api/reverse-geocode', async (req, res) => {
     }
 
     const primary = await reverseViaNominatim(lat, lng);
-    if (primary.barangay || primary.landmark) return res.json(primary);
+    if (primary.barangay || primary.landmark || primary.street) return res.json(primary);
 
     const fallback = await reverseViaBigDataCloud(lat, lng);
     return res.json(fallback);
@@ -212,6 +319,26 @@ function normalizeBarangayLabel(value) {
   return s;
 }
 
+function reportLookupQuery(id) {
+  const raw = String(id || '').trim();
+  if (!raw) return { reportId: '' };
+  if (mongoose.Types.ObjectId.isValid(raw)) {
+    return { $or: [{ reportId: raw }, { _id: raw }] };
+  }
+  return { reportId: raw };
+}
+
+function parseGpsCoords(gps) {
+  const s = String(gps || '');
+  const m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat, lng };
+}
+
 async function reverseViaNominatim(lat, lng) {
   const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&addressdetails=1&zoom=18`;
   try {
@@ -235,9 +362,10 @@ async function reverseViaNominatim(lat, lng) {
       ])
     );
     const landmark = pickFirst([data.name, a.amenity, a.building, a.shop, a.tourism, a.leisure, a.road, a.pedestrian, a.footway]);
-    return { barangay, landmark };
+    const street = pickFirst([a.road, a.pedestrian, a.footway, a.path, a.cycleway, a.neighbourhood, a.neighborhood]);
+    return { barangay, landmark, street };
   } catch (_e) {
-    return { barangay: '', landmark: '' };
+    return { barangay: '', landmark: '', street: '' };
   }
 }
 
@@ -260,9 +388,10 @@ async function reverseViaBigDataCloud(lat, lng) {
       ])
     );
     const landmark = pickFirst([data.locality, data.city, data.principalSubdivision]);
-    return { barangay, landmark };
+    const street = pickFirst([data.locality, data.city, data.principalSubdivision]);
+    return { barangay, landmark, street };
   } catch (_e) {
-    return { barangay: '', landmark: '' };
+    return { barangay: '', landmark: '', street: '' };
   }
 }
 
