@@ -467,6 +467,20 @@
     </div>
   </a>
   <div class="header-right">
+    <% if (currentUser && currentUser.role === 'admin') { %>
+      <a class="nav-btn" href="/admin">Admin Panel</a>
+    <% } %>
+    <% if (currentUser && currentUser.role === 'dispatcher') { %>
+      <a class="nav-btn" href="/dispatcher/profile"><%= (currentUser.fullName || currentUser.username || 'Profile') %></a>
+    <% } %>
+    <button class="nav-btn danger" onclick="clearAll()">
+      <!-- Heroicon: trash -->
+      <svg viewBox="0 0 24 24"><path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+      Clear All
+    </button>
+    <form method="post" action="/dispatcher/logout" style="margin:0">
+      <button class="nav-btn" type="submit">Logout</button>
+    </form>
     <div class="header-weather" id="weatherText">
       <svg viewBox="0 0 24 24"><path d="M2.25 15a4.5 4.5 0 0 0 4.5 4.5H18a3.75 3.75 0 0 0 1.332-7.257 3 3 0 0 0-3.758-3.848 5.25 5.25 0 0 0-10.233 2.33A4.502 4.502 0 0 0 2.25 15Z"/></svg>
       Loading weather...
@@ -675,6 +689,12 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      window.location.replace('/dispatcher/login');
+    }
+  });
+
   const socket = io();
   let reports = [];
   try {
@@ -1187,12 +1207,19 @@
       return;
     }
     try {
-      await fetch(`/api/report/${encodeURIComponent(id)}/status`, {method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+      const res = await fetch(`/api/report/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not update status');
       const r = reports.find(x=>x.id===id);
       if (r) { r.status=status; lastReportsSig = reportsSignature(reports); render(); }
       const msgs = {verifying:'Calling reporter to verify…',dispatched:'Response team dispatched!',resolved:'Incident resolved.',['false-report']:'Flagged as false report.'};
       toast_(id, msgs[status]||'');
-    } catch(e) { toast_('Error','Could not update status.','warn'); }
+    } catch(e) { toast_('Error', e && e.message ? e.message : 'Could not update status.','warn'); }
   }
 
   function editDetails(id) {
@@ -1238,6 +1265,7 @@
     try {
       const res = await fetch(`/api/report/${encodeURIComponent(id)}/details`, {
         method: 'PATCH',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
@@ -1288,6 +1316,13 @@
     if (!confirm('Clear all reports? This cannot be undone.')) return;
     await fetch('/api/reports',{method:'DELETE'});
     reports=[]; lastReportsSig = reportsSignature(reports); render();
+    const res = await fetch('/api/reports',{method:'DELETE', credentials:'same-origin'});
+    if (!res.ok) {
+      const data = await res.json().catch(()=>({}));
+      toast_('Error', data.error || 'Could not clear reports.', 'warn');
+      return;
+    }
+    reports=[]; render();
   }
 
   function toast_(title, msg, type='ok') {

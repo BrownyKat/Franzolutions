@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispatcher Profile</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#f5f2ec;color:#1f1a12}
+    .wrap{max-width:640px;margin:28px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #e3d8c8;border-radius:12px;padding:18px}
+    label{display:block;font-size:12px;font-weight:700;margin:11px 0 6px;text-transform:uppercase;color:#6f644f}
+    input{width:100%;padding:10px;border:1px solid #d8cdbd;border-radius:9px;box-sizing:border-box}
+    .btn{margin-top:14px;padding:10px 14px;border:1px solid #d8cdbd;border-radius:9px;background:#fff;cursor:pointer;font-weight:700}
+    .btn.primary{background:#d97706;border-color:#d97706;color:#fff}
+    .msg{padding:10px;border-radius:9px;margin-top:12px;font-size:13px}
+    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+    .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <h1 style="margin:0">Dispatcher Profile</h1>
+      <div style="display:flex;gap:8px">
+        <a class="btn" href="/dashboard" style="text-decoration:none;color:#1f1a12">Back to Dashboard</a>
+        <form method="post" action="/dispatcher/logout"><button class="btn" type="submit">Logout</button></form>
+      </div>
+    </div>
+
+    <% if (success) { %><div class="msg ok"><%= success %></div><% } %>
+    <% if (error) { %><div class="msg err"><%= error %></div><% } %>
+
+    <form class="card" method="post" action="/dispatcher/profile">
+      <label>Username</label>
+      <input value="<%= dispatcher.username %>" disabled>
+
+      <label for="fullName">Full Name</label>
+      <input id="fullName" name="fullName" value="<%= dispatcher.fullName || '' %>">
+
+      <label for="phone">Phone</label>
+      <input id="phone" name="phone" value="<%= dispatcher.phone || '' %>">
+
+      <label for="currentPassword">Current Password (required to change password)</label>
+      <input id="currentPassword" name="currentPassword" type="password">
+
+      <label for="newPassword">New Password (optional)</label>
+      <input id="newPassword" name="newPassword" type="password" placeholder="At least 6 characters">
+
+      <button class="btn primary" type="submit">Save Profile</button>
+    </form>
+  </div>
+  <script>
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted) {
+        window.location.replace('/dispatcher/login');
+      }
+    });
+  </script>
+</body>
+</html>
