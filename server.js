@@ -1018,6 +1018,35 @@ async function logAudit(entry) {
   }
 }
 
+function isApiRequest(req) {
+  return String((req && req.path) || '').startsWith('/api/');
+}
+
+// Final 404 handler.
+app.use((req, res) => {
+  if (isApiRequest(req)) return res.status(404).json({ error: 'Not found' });
+  return res.status(404).send('Page not found');
+});
+
+// Final Express error handler.
+app.use((err, req, res, _next) => {
+  const msg = err && err.message ? err.message : String(err || 'Unknown error');
+  console.error('[http] unhandled error:', msg);
+  if (res.headersSent) return;
+  if (isApiRequest(req)) return res.status(500).json({ error: 'Internal server error' });
+  return res.status(500).send('Internal server error');
+});
+
+process.on('unhandledRejection', reason => {
+  const msg = reason && reason.message ? reason.message : String(reason || 'Unknown rejection');
+  console.error('[process] unhandledRejection:', msg);
+});
+
+process.on('uncaughtException', err => {
+  const msg = err && err.message ? err.message : String(err || 'Unknown exception');
+  console.error('[process] uncaughtException:', msg);
+});
+
 // â”€â”€ Realtime (Pusher) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // â”€â”€ Start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
