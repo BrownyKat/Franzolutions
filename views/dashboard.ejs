@@ -55,7 +55,8 @@
       backdrop-filter:blur(20px) saturate(160%);
       border-bottom:1px solid var(--border);
       box-shadow:var(--shadow-xs);
-      z-index:200;
+      position:sticky;top:0;
+      z-index:220;
     }
     .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;}
     .brand-shield{
@@ -99,7 +100,7 @@
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
     /* ── BODY LAYOUT ── */
-    .body{display:flex;flex:1;min-height:0;overflow:hidden;}
+    .body{display:flex;flex:1;min-height:0;height:calc(100vh - 64px);overflow:hidden;}
 
     /* ── SIDEBAR ── */
     .sidebar{
@@ -107,6 +108,9 @@
       background:var(--surface);
       border-right:1px solid var(--border);
       display:flex;flex-direction:column;
+      position:sticky;top:64px;align-self:flex-start;
+      height:calc(100vh - 64px);
+      min-height:calc(100vh - 64px);
       overflow:hidden;
     }
     .sidebar-top{padding:1.25rem 1.1rem .9rem;border-bottom:1px solid var(--border);}
@@ -154,12 +158,12 @@
     .fi-false .fi-count{color:var(--muted);}
     .fi-all .fi-count{color:var(--muted);}
 
-    .sidebar-footer{padding:1rem 1.1rem;border-top:1px solid var(--border);}
+    .sidebar-footer{padding:1rem 1.1rem;border-top:1px solid var(--border);margin-top:auto;}
     .sidebar-footer p{font-size:.7rem;color:var(--muted2);line-height:1.55;}
     .sidebar-footer strong{color:var(--muted);}
 
     /* ── MAIN ── */
-    .main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;}
+    .main{flex:1;min-width:0;height:calc(100vh - 64px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
     .main-inner{padding:1.5rem 1.75rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
 
     .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
@@ -179,23 +183,41 @@
       font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:800;line-height:1;
       padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid var(--border);
     }
-    .main-head-tools{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem;justify-content:flex-end;}
+    .main-head-tools{display:flex;flex-direction:column;align-items:flex-end;gap:.55rem;justify-content:flex-end;}
     .main-datetime{
       display:flex;align-items:center;gap:10px;
-      padding:.55rem 1rem;min-height:58px;
-      background:var(--surface);border:1px solid var(--border-mid);border-radius:14px;
-      color:var(--text2);white-space:nowrap;
+      padding:.62rem 1.05rem;min-height:66px;
+      background:linear-gradient(165deg,#0B1220,#05080F);
+      border:1px solid #1F2937;border-radius:14px;
+      color:#A7F3D0;white-space:nowrap;
+      box-shadow:inset 0 0 0 1px rgba(148,163,184,.08),0 10px 24px rgba(2,6,23,.28);
     }
-    .main-datetime svg{width:24px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+    .main-datetime svg{width:24px;height:18px;stroke:#60A5FA;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
     .time-block{display:flex;flex-direction:column;line-height:1.05;}
     .clock-text{
       font-family:'Orbitron','JetBrains Mono',monospace;
-      font-size:1.3rem;font-weight:700;letter-spacing:1.2px;color:var(--text);
+      font-size:1.36rem;font-weight:700;letter-spacing:1.3px;color:#86EFAC;
+      text-shadow:0 0 12px rgba(134,239,172,.22);
     }
     .date-text{
       font-family:'JetBrains Mono',monospace;
-      font-size:.67rem;font-weight:700;letter-spacing:.5px;color:var(--muted);
-      margin-top:3px;
+      font-size:.68rem;font-weight:700;letter-spacing:.7px;color:#93C5FD;
+      margin-top:4px;
+    }
+    .user-greet{
+      background:var(--surface);
+      border:1px solid var(--border-mid);
+      border-radius:999px;
+      padding:.42rem .9rem;
+      font-size:.78rem;
+      font-weight:700;
+      color:var(--text2);
+      white-space:nowrap;
+      box-shadow:var(--shadow-xs);
+    }
+    .user-greet span{
+      color:var(--amber-deep);
+      font-weight:800;
     }
     .filter-label-bar{
       font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;
@@ -442,6 +464,9 @@
 
     @media(max-width:1024px){
       .header{padding:0 .95rem;height:60px}
+      .body{height:calc(100vh - 60px);}
+      .sidebar{top:60px;height:calc(100vh - 60px);min-height:calc(100vh - 60px);}
+      .main{height:calc(100vh - 60px);}
       .main-inner{padding:1rem 1rem 2rem}
       .sidebar{width:220px}
       .rcard{padding:1.1rem 1.05rem}
@@ -500,14 +525,6 @@
     <% if (currentUser && currentUser.role === 'admin') { %>
       <a class="nav-btn" href="/admin">Admin Panel</a>
     <% } %>
-    <% if (currentUser && currentUser.role === 'dispatcher') { %>
-      <a class="nav-btn" href="/dispatcher/profile"><%= (currentUser.fullName || currentUser.username || 'Profile') %></a>
-    <% } %>
-    <button class="nav-btn danger" onclick="clearAll()">
-      <!-- Heroicon: trash -->
-      <svg viewBox="0 0 24 24"><path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
-      Clear All
-    </button>
     <form method="post" action="/dispatcher/logout" style="margin:0">
       <button class="nav-btn" type="submit">Logout</button>
     </form>
@@ -584,14 +601,6 @@
         <span class="fi-count" id="cFalse">0</span>
       </div>
 
-      <div class="filter-item fi-false" onclick="setFilter('false-report',this)">
-        <div class="fi-icon">
-          <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-        </div>
-        <span class="fi-label">False</span>
-        <span class="fi-count" id="cFalse">0</span>
-      </div>
-
     </div>
 
     <div class="sidebar-footer">
@@ -623,6 +632,7 @@
             <svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg>
             Loading time...
           </div>
+          <div class="user-greet">HI!!! <span><%= (currentUser && (currentUser.fullName || currentUser.username)) ? (currentUser.fullName || currentUser.username) : 'Dispatcher' %></span></div>
         </div>
       </div>
 
@@ -679,44 +689,8 @@
     </div>
   </div>
 </div>
-<!-- EDIT NAME/LOCATION MODAL -->
-<div class="edit-backdrop" id="editBackdrop" onclick="if(event.target===this) closeEditModal()">
-  <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
-    <div class="edit-head">
-      <div class="edit-title" id="editTitle">Edit Reporter Name & Location</div>
-      <button class="edit-close" type="button" onclick="closeEditModal()">Close</button>
-    </div>
-    <form class="edit-form" id="editForm">
-      <div class="edit-field">
-        <label for="editName">Reporter Name</label>
-        <input id="editName" name="name" type="text" maxlength="120">
-      </div>
-      <div class="edit-field">
-        <label for="editBarangay">Barangay</label>
-        <input id="editBarangay" name="barangay" type="text" maxlength="120">
-      </div>
-      <div class="edit-field">
-        <label for="editLandmark">Landmark</label>
-        <input id="editLandmark" name="landmark" type="text" maxlength="140">
-      </div>
-      <div class="edit-field">
-        <label for="editStreet">Street</label>
-        <input id="editStreet" name="street" type="text" maxlength="140">
-      </div>
-      <div class="edit-field">
-        <label for="editGps">GPS (lat,lng)</label>
-        <input id="editGps" name="gps" type="text" maxlength="60" placeholder="e.g. 14.609100,121.022300">
-      </div>
-    </form>
-    <div class="edit-actions">
-      <button class="edit-btn" type="button" onclick="closeEditModal()">Cancel</button>
-      <button class="edit-btn save" type="button" onclick="saveEditDetails()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
 <script id="initialReports" type="application/json"><%- JSON.stringify(reports) %></script>
-<script src="/socket.io/socket.io.js"></script>
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   window.addEventListener('pageshow', function (event) {
@@ -766,6 +740,7 @@
     if (!el) return;
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const month = pad(now.getMonth() + 1);
     const day = pad(now.getDate());
     const year = now.getFullYear();
@@ -774,7 +749,7 @@
     const minute = pad(now.getMinutes());
     const second = pad(now.getSeconds());
     const ampm = h24 >= 12 ? 'PM' : 'AM';
-    const dateText = `${month}/${day}/${year}`;
+    const dateText = `${days[now.getDay()]}  ${month}/${day}/${year}`;
     const clockText = `${pad(hour12)}:${minute}:${second} ${ampm}`;
     el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg><div class="time-block"><span class="clock-text">${clockText}</span><span class="date-text">${dateText}</span></div>`;
   }
@@ -884,7 +859,7 @@
       dispatched:'Dispatched',
       resolved:'Resolved',
       ['false-report']:'False Reports'
-    ,['false-report']:'False Reports'};
+    };
     document.getElementById('filterLabel').textContent = labels[f] || f;
     render();
   }
@@ -896,6 +871,10 @@
     const ico = typeIcons[r.emergencyType] || typeIcons.Other;
     const sp  = r.status.replace('-','-');
     const gpsMap = gpsMapHTML(r);
+    const isPanic = r.emergencyType === 'PANIC SOS';
+    const exactLocation = getReadableLocation(r);
+    const prankCount = getFalseCountByContact(r.contact);
+    const meter = trustMeter(prankCount);
     return `
     <div class="rcard sev-${r.severity}" id="card-${rid}">
       <div class="rcard-top">
@@ -1193,48 +1172,6 @@
     if (changed) render();
   }
 
-  async function reverseGeocodeForDashboard(lat, lng) {
-    const key = `${lat.toFixed(5)},${lng.toFixed(5)}`;
-    if (geoCache.has(key)) return geoCache.get(key);
-    if (geoInFlight.has(key)) return null;
-    geoInFlight.add(key);
-    try {
-      const res = await fetch(`/api/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`);
-      if (!res.ok) return null;
-      const data = await res.json().catch(() => ({}));
-      const out = {
-        barangay: String((data && data.barangay) || '').trim(),
-        landmark: String((data && data.landmark) || '').trim(),
-        street: String((data && data.street) || '').trim(),
-      };
-      geoCache.set(key, out);
-      return out;
-    } catch (_e) {
-      return null;
-    } finally {
-      geoInFlight.delete(key);
-    }
-  }
-
-  async function hydrateLegacyPanicLocations() {
-    const candidates = reports.filter(r =>
-      r && r.emergencyType === 'PANIC SOS' && parseGps(r.gps) && !getReadableLocation(r)
-    );
-    if (!candidates.length) return;
-
-    let changed = false;
-    for (const r of candidates) {
-      const p = parseGps(r.gps);
-      if (!p) continue;
-      const g = await reverseGeocodeForDashboard(p.lat, p.lng);
-      if (!g) continue;
-      if (!r.barangay && g.barangay) { r.barangay = g.barangay; changed = true; }
-      if ((!r.landmark || parseGps(r.landmark) || isUnknownLocationText(r.landmark)) && g.landmark) { r.landmark = g.landmark; changed = true; }
-      if (!r.street && g.street) { r.street = g.street; changed = true; }
-    }
-    if (changed) render();
-  }
-
   function handleUnauthorized(data) {
     const msg = (data && data.error) ? String(data.error) : 'Session expired. Please log in again.';
     toast_('Unauthorized', msg, 'warn');
@@ -1359,25 +1296,6 @@
     if (confirm(`Mark this ${label} as false report?`)) updStatus(id, 'false-report');
   }
 
-  async function clearAll() {
-    if (!reports.length) return;
-    if (!confirm('Clear all reports? This cannot be undone.')) return;
-    await fetch('/api/reports',{method:'DELETE'});
-    reports=[]; lastReportsSig = reportsSignature(reports); render();
-    const res = await fetch('/api/reports',{method:'DELETE', credentials:'same-origin'});
-    if (res.status === 401) {
-      const data = await res.json().catch(() => ({}));
-      handleUnauthorized(data);
-      return;
-    }
-    if (!res.ok) {
-      const data = await res.json().catch(()=>({}));
-      toast_('Error', data.error || 'Could not clear reports.', 'warn');
-      return;
-    }
-    reports=[]; render();
-  }
-
   function toast_(title, msg, type='ok') {
     const t=document.getElementById('toast');
     document.getElementById('toastTitle').textContent=title;
@@ -1413,14 +1331,12 @@
       render();
     }
   });
-  socket.on('reports-cleared', ()=>{ reports=[]; lastReportsSig = reportsSignature(reports); render(); });
-  socket.on('connect', () => { void syncReportsFromServer(); });
-  socket.on('reconnect', () => { void syncReportsFromServer(); });
-  socket.on('disconnect', () => { void syncReportsFromServer(); });
-  socket.on('connect_error', () => { void syncReportsFromServer(); });
+  if (channel) channel.bind('reports-cleared', ()=>{ reports=[]; lastReportsSig = reportsSignature(reports); render(); });
 
   // initial render
   render();
+  void syncReportsFromServer(true);
+  setInterval(() => { void syncReportsFromServer(); }, 10000);
   updateDateTime();
   setInterval(updateDateTime, 1000);
   loadWeather();
