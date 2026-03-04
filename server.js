@@ -20,6 +20,7 @@ const io     = new Server(server);
 const SESSIONS = new Map();
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
 const COOKIE_NAME = 'auth_token';
+const SESSION_SECRET = String(process.env.SESSION_SECRET || process.env.ADMIN_PASSWORD || 'change-me-session-secret');
 
 setInterval(() => {
   const now = Date.now();
@@ -45,13 +46,24 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use((req, res, next) => {
   const token = getCookie(req, COOKIE_NAME);
   if (!token) return next();
-  const session = SESSIONS.get(token);
-  if (!session || session.expiresAt < Date.now()) {
+  const now = Date.now();
+
+  let session = SESSIONS.get(token);
+  if (session && session.expiresAt < now) {
     SESSIONS.delete(token);
+    session = null;
+  }
+
+  // Fallback for stateless/serverless deployments (e.g. Vercel),
+  // where in-memory sessions are not guaranteed across requests.
+  if (!session) {
+    session = verifySessionToken(token);
+  }
+  if (!session || session.expiresAt < now) {
     clearSessionCookie(res);
     return next();
   }
-  session.expiresAt = Date.now() + SESSION_TTL_MS;
+
   req.auth = { ...session };
   req.authToken = token;
   res.locals.auth = req.auth;
@@ -251,11 +263,12 @@ app.post('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/lo
     dispatcher.phone = phone;
     await dispatcher.save();
 
-    const session = SESSIONS.get(req.authToken);
-    if (session) {
-      session.fullName = dispatcher.fullName || dispatcher.username;
-      SESSIONS.set(req.authToken, session);
-    }
+    createSession(req, res, {
+      role: 'dispatcher',
+      userId: String(dispatcher._id),
+      username: dispatcher.username,
+      fullName: dispatcher.fullName || dispatcher.username,
+    });
 
     await logAudit({
       actorRole: 'dispatcher',
@@ -831,8 +844,9 @@ function getCookie(req, name) {
 function createSession(req, res, payload) {
   const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
   if (currentToken) SESSIONS.delete(currentToken);
-  const token = crypto.randomBytes(24).toString('hex');
-  SESSIONS.set(token, { ...payload, expiresAt: Date.now() + SESSION_TTL_MS });
+  const token = signSessionToken(payload);
+  const session = { ...payload, expiresAt: Date.now() + SESSION_TTL_MS };
+  SESSIONS.set(token, session);
   res.cookie(COOKIE_NAME, token, {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
@@ -853,6 +867,55 @@ function destroySession(req, res) {
   const token = req.authToken || getCookie(req, COOKIE_NAME);
   if (token) SESSIONS.delete(token);
   clearSessionCookie(res);
+}
+
+function toBase64Url(input) {
+  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function fromBase64Url(input) {
+  const base = String(input || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padLen = (4 - (base.length % 4)) % 4;
+  return Buffer.from(base + '='.repeat(padLen), 'base64').toString('utf8');
+}
+
+function signSessionToken(payload) {
+  const body = toBase64Url(JSON.stringify({
+    role: payload.role,
+    userId: payload.userId,
+    username: payload.username,
+    fullName: payload.fullName,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+  }));
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+
+function verifySessionToken(token) {
+  const raw = String(token || '');
+  const parts = raw.split('.');
+  if (parts.length !== 2) return null;
+  const [body, sig] = parts;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+  } catch (_e) {
+    return null;
+  }
+  try {
+    const data = JSON.parse(fromBase64Url(body));
+    if (!data || !data.role || !data.userId || !data.expiresAt) return null;
+    if (Number(data.expiresAt) < Date.now()) return null;
+    return {
+      role: data.role,
+      userId: data.userId,
+      username: data.username || '',
+      fullName: data.fullName || data.username || '',
+      expiresAt: Number(data.expiresAt),
+    };
+  } catch (_e) {
+    return null;
+  }
 }
 
 function requireRolesPage(roles, loginPath = '/dispatcher/login') {
