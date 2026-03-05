@@ -195,6 +195,12 @@
     .table-wrap{
       margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:auto;background:#fff;
     }
+    .pager{
+      margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      color:var(--muted);font-size:13px;
+    }
+    .pager-actions{display:flex;align-items:center;gap:8px}
+    .pager .btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
     table{width:100%;border-collapse:collapse;min-width:760px}
     th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:14px;vertical-align:top}
     th{
@@ -386,6 +392,9 @@
           Reports
         </h2>
         <form class="filters" method="get" action="/admin">
+          <input type="hidden" name="tab" value="reports">
+          <input type="hidden" name="reportPage" value="1">
+          <input type="hidden" name="auditPage" value="<%= (auditPagination && auditPagination.page) || 1 %>">
           <div class="f">
             <label for="from">From</label>
             <input id="from" type="date" name="from" value="<%= from || '' %>">
@@ -395,19 +404,20 @@
             <input id="to" type="date" name="to" value="<%= to || '' %>">
           </div>
           <button class="btn" type="submit">Apply</button>
-          <a class="btn" href="/admin">Reset</a>
-          <a class="btn" href="/admin/reports/export.xls?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
-          <a class="btn" href="/admin/reports/export.pdf?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
+          <a class="btn" href="/admin?tab=reports&auditPage=<%= (auditPagination && auditPagination.page) || 1 %>&reportPage=1">Reset</a>
+          <a class="btn" href="/admin/reports/export.xls?tab=reports&from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
+          <a class="btn" href="/admin/reports/export.pdf?tab=reports&from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
         </form>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Reporter</th><th>Location</th><th>Timestamp</th></tr></thead>
+            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Dispatcher</th><th>Severity</th><th>Reporter</th><th>Location</th><th>Timestamp</th></tr></thead>
             <tbody>
               <% reports.forEach(function(r){ %>
               <tr>
                 <td><%= r.reportId || r._id %></td>
                 <td><%= r.emergencyType || '-' %></td>
                 <td><%= r.status || '-' %></td>
+                <td><%= r.dispatcherName || '-' %></td>
                 <td><%= r.severity || '-' %></td>
                 <td><%= r.name || '-' %><br><span style="font-size:12px;color:#6f644f"><%= r.contact || '-' %></span></td>
                 <td><%= [r.street, r.landmark, r.barangay].filter(Boolean).join(', ') || '-' %></td>
@@ -416,6 +426,15 @@
               <% }) %>
             </tbody>
           </table>
+        </div>
+        <% const rp = reportPagination || { page: 1, totalPages: 1, totalCount: 0, hasPrev: false, hasNext: false }; %>
+        <% const reportsBase = '/admin?tab=reports&from=' + encodeURIComponent(from || '') + '&to=' + encodeURIComponent(to || '') + '&auditPage=' + encodeURIComponent((auditPagination && auditPagination.page) || 1); %>
+        <div class="pager">
+          <div>Showing page <strong><%= rp.page %></strong> of <strong><%= rp.totalPages %></strong> (<%= rp.totalCount %> reports)</div>
+          <div class="pager-actions">
+            <a class="btn" href="<%= reportsBase %>&reportPage=<%= rp.page - 1 %>" aria-disabled="<%= rp.hasPrev ? 'false' : 'true' %>">Previous</a>
+            <a class="btn" href="<%= reportsBase %>&reportPage=<%= rp.page + 1 %>" aria-disabled="<%= rp.hasNext ? 'false' : 'true' %>">Next</a>
+          </div>
         </div>
       </section>
 
@@ -487,6 +506,15 @@
             </tbody>
           </table>
         </div>
+        <% const ap = auditPagination || { page: 1, totalPages: 1, totalCount: 0, hasPrev: false, hasNext: false }; %>
+        <% const auditBase = '/admin?tab=audit&reportPage=' + encodeURIComponent((reportPagination && reportPagination.page) || 1); %>
+        <div class="pager">
+          <div>Showing page <strong><%= ap.page %></strong> of <strong><%= ap.totalPages %></strong> (<%= ap.totalCount %> audit entries)</div>
+          <div class="pager-actions">
+            <a class="btn" href="<%= auditBase %>&auditPage=<%= ap.page - 1 %>" aria-disabled="<%= ap.hasPrev ? 'false' : 'true' %>">Previous</a>
+            <a class="btn" href="<%= auditBase %>&auditPage=<%= ap.page + 1 %>" aria-disabled="<%= ap.hasNext ? 'false' : 'true' %>">Next</a>
+          </div>
+        </div>
       </section>
     </main>
   </div>
@@ -498,6 +526,9 @@
         <button class="modal-close" type="button" data-close-modal="#addDispatcherModal">Close</button>
       </div>
       <form class="modal-form" method="post" action="/admin/dispatchers">
+        <input type="hidden" name="tab" value="dispatchers">
+        <input type="hidden" name="reportPage" value="<%= (reportPagination && reportPagination.page) || 1 %>">
+        <input type="hidden" name="auditPage" value="<%= (auditPagination && auditPagination.page) || 1 %>">
         <div class="modal-field">
           <label for="addUsername">Username</label>
           <input id="addUsername" name="username" required>
@@ -529,6 +560,9 @@
         <button class="modal-close" type="button" data-close-modal="#editDispatcherModal">Close</button>
       </div>
       <form id="editDispatcherForm" class="modal-form" method="post" action="/admin/dispatchers/__id__/update">
+        <input type="hidden" name="tab" value="dispatchers">
+        <input type="hidden" name="reportPage" value="<%= (reportPagination && reportPagination.page) || 1 %>">
+        <input type="hidden" name="auditPage" value="<%= (auditPagination && auditPagination.page) || 1 %>">
         <div class="modal-field">
           <label for="editUsername">Username</label>
           <input id="editUsername" name="username" required>
@@ -563,6 +597,9 @@
       <div class="delete-body">
         <p>You are about to delete <span id="deleteDispatcherName" class="delete-username">this dispatcher</span>. This action cannot be undone.</p>
         <form id="deleteDispatcherForm" method="post" action="/admin/dispatchers/__id__/delete">
+          <input type="hidden" name="tab" value="dispatchers">
+          <input type="hidden" name="reportPage" value="<%= (reportPagination && reportPagination.page) || 1 %>">
+          <input type="hidden" name="auditPage" value="<%= (auditPagination && auditPagination.page) || 1 %>">
           <div class="modal-actions" style="padding-top:0">
             <button class="btn" type="button" data-close-modal="#deleteDispatcherModal">Cancel</button>
             <button class="btn warn" type="submit">Delete Dispatcher</button>
@@ -582,11 +619,19 @@
 
     const navItems = Array.from(document.querySelectorAll('.nav-item[data-tab]'));
     const panels = Array.from(document.querySelectorAll('.tab-panel[data-panel]'));
+    const allowedTabs = new Set(navItems.map(n => n.dataset.tab));
     function showTab(tab) {
-      navItems.forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
-      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+      const safeTab = allowedTabs.has(tab) ? tab : 'dashboard';
+      navItems.forEach(n => n.classList.toggle('active', n.dataset.tab === safeTab));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === safeTab));
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', safeTab);
+      window.history.replaceState({}, '', url.toString());
     }
     navItems.forEach(n => n.addEventListener('click', () => showTab(n.dataset.tab)));
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    if (initialTab) showTab(initialTab);
 
     function openModal(sel) {
       const el = document.querySelector(sel);
@@ -617,7 +662,7 @@
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         if (!id || !editForm) return;
-        editForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/update';
+        editForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/update?tab=dispatchers';
         document.getElementById('editUsername').value = btn.getAttribute('data-username') || '';
         document.getElementById('editFullName').value = btn.getAttribute('data-fullname') || '';
         document.getElementById('editPhone').value = btn.getAttribute('data-phone') || '';
@@ -631,7 +676,7 @@
         const id = btn.getAttribute('data-id');
         const username = btn.getAttribute('data-username') || 'this dispatcher';
         if (!id || !deleteForm) return;
-        deleteForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/delete';
+        deleteForm.action = '/admin/dispatchers/' + encodeURIComponent(id) + '/delete?tab=dispatchers';
         if (deleteName) deleteName.textContent = username;
         openModal('#deleteDispatcherModal');
       });

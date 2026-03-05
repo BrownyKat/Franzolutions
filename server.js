@@ -18,6 +18,8 @@ const Session     = require('./models/Session');
 const app    = express();
 const server = http.createServer(app);
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
+const ADMIN_REPORTS_PAGE_SIZE = 20;
+const ADMIN_AUDIT_PAGE_SIZE = 20;
 const COOKIE_NAME_LEGACY = 'auth_token';
 const ROLE_COOKIE_NAMES = {
   admin: 'auth_token_admin',
@@ -323,21 +325,42 @@ app.post('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/lo
 app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
+    const reportPage = parsePositiveInt(req.query.reportPage, 1);
+    const auditPage = parsePositiveInt(req.query.auditPage, 1);
     const dispatchers = await Dispatcher.find().sort({ createdAt: -1 }).lean();
-    const reports = await Report.find(where).sort({ timestamp: -1 }).lean({ virtuals: true });
-    const auditLogs = await AuditLog.find({ actorRole: 'dispatcher' }).sort({ timestamp: -1 }).limit(500).lean();
+    const reportTotal = await Report.countDocuments(where);
+    const reportTotalPages = Math.max(1, Math.ceil(reportTotal / ADMIN_REPORTS_PAGE_SIZE));
+    const safeReportPage = Math.min(reportPage, reportTotalPages);
+    const reports = await Report.find(where)
+      .sort({ timestamp: -1 })
+      .skip((safeReportPage - 1) * ADMIN_REPORTS_PAGE_SIZE)
+      .limit(ADMIN_REPORTS_PAGE_SIZE)
+      .lean({ virtuals: true });
+
+    const auditWhere = { actorRole: 'dispatcher' };
+    const auditTotal = await AuditLog.countDocuments(auditWhere);
+    const auditTotalPages = Math.max(1, Math.ceil(auditTotal / ADMIN_AUDIT_PAGE_SIZE));
+    const safeAuditPage = Math.min(auditPage, auditTotalPages);
+    const auditLogs = await AuditLog.find(auditWhere)
+      .sort({ timestamp: -1 })
+      .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
+      .limit(ADMIN_AUDIT_PAGE_SIZE)
+      .lean();
     res.render('admin', {
       dispatchers,
       reports,
       auditLogs,
       stats: {
-        totalReports: reports.length,
+        totalReports: reportTotal,
         activeDispatchers: dispatchers.filter(d => d.isActive).length,
         totalDispatchers: dispatchers.length,
-        auditCount: auditLogs.length,
+        auditCount: auditTotal,
       },
+      reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
+      auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
       from,
       to,
+      tab: pickAdminTab(req.query.tab),
       currentUser: req.auth,
       error: String(req.query.err || ''),
       success: String(req.query.ok || ''),
@@ -367,7 +390,7 @@ app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), asyn
       passwordHash: hashPassword(password),
       isActive: true,
     });
-    return res.redirect('/admin?ok=Dispatcher%20created');
+    return res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher created' }));
   } catch (err) {
     console.error(err);
     const msg = err && err.code === 11000 ? 'Username already exists.' : 'Could not create dispatcher.';
@@ -378,7 +401,7 @@ app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), asyn
 app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     const dispatcher = await Dispatcher.findById(req.params.id);
-    if (!dispatcher) return res.redirect('/admin?err=Dispatcher%20not%20found');
+    if (!dispatcher) return res.redirect(adminRedirectUrl(req, { err: 'Dispatcher not found' }));
 
     dispatcher.username = String(req.body.username || '').trim();
     dispatcher.fullName = String(req.body.fullName || '').trim();
@@ -386,25 +409,25 @@ app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/lo
     dispatcher.isActive = req.body.isActive === 'on';
     const newPassword = String(req.body.newPassword || '');
     if (newPassword) {
-      if (newPassword.length < 6) return res.redirect('/admin?err=Password%20must%20be%20at%20least%206%20characters');
+      if (newPassword.length < 6) return res.redirect(adminRedirectUrl(req, { err: 'Password must be at least 6 characters' }));
       dispatcher.passwordHash = hashPassword(newPassword);
     }
     await dispatcher.save();
-    res.redirect('/admin?ok=Dispatcher%20updated');
+    res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher updated' }));
   } catch (err) {
     console.error(err);
     const msg = err && err.code === 11000 ? 'Username already exists.' : 'Could not update dispatcher.';
-    res.redirect(`/admin?err=${encodeURIComponent(msg)}`);
+    res.redirect(adminRedirectUrl(req, { err: msg }));
   }
 });
 
 app.post('/admin/dispatchers/:id/delete', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     await Dispatcher.findByIdAndDelete(req.params.id);
-    res.redirect('/admin?ok=Dispatcher%20deleted');
+    res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher deleted' }));
   } catch (err) {
     console.error(err);
-    res.redirect('/admin?err=Could%20not%20delete%20dispatcher');
+    res.redirect(adminRedirectUrl(req, { err: 'Could not delete dispatcher' }));
   }
 });
 
@@ -438,6 +461,7 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
         r.reportId || String(r._id || ''),
         r.emergencyType || '',
         r.status || '',
+        r.dispatcherName || '-',
         r.barangay || '',
         r.landmark || '',
         new Date(r.timestamp).toLocaleString(),
@@ -540,9 +564,14 @@ app.post('/api/panic', async (req, res) => {
 app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
   try {
     const where = reportLookupQuery(req.params.id);
+    const updates = { status: req.body.status };
+    if (req.auth && req.auth.role === 'dispatcher') {
+      updates.dispatcherId = String(req.auth.userId || '');
+      updates.dispatcherName = String(req.auth.fullName || req.auth.username || '').trim();
+    }
     const report = await Report.findOneAndUpdate(
       where,
-      { status: req.body.status },
+      updates,
       { new: true }
     );
     if (!report) return res.status(404).json({ error: 'Not found' });
@@ -955,25 +984,83 @@ function buildReportDateRangeFilter(fromRaw, toRaw) {
 
 async function renderAdminPage(req, res, options = {}, statusCode = 200) {
   const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
+  const reportPage = parsePositiveInt(req.query.reportPage || req.body.reportPage, 1);
+  const auditPage = parsePositiveInt(req.query.auditPage || req.body.auditPage, 1);
   const dispatchers = await Dispatcher.find().sort({ createdAt: -1 }).lean();
-  const reports = await Report.find(where).sort({ timestamp: -1 }).lean({ virtuals: true });
-  const auditLogs = await AuditLog.find({ actorRole: 'dispatcher' }).sort({ timestamp: -1 }).limit(500).lean();
+  const reportTotal = await Report.countDocuments(where);
+  const reportTotalPages = Math.max(1, Math.ceil(reportTotal / ADMIN_REPORTS_PAGE_SIZE));
+  const safeReportPage = Math.min(reportPage, reportTotalPages);
+  const reports = await Report.find(where)
+    .sort({ timestamp: -1 })
+    .skip((safeReportPage - 1) * ADMIN_REPORTS_PAGE_SIZE)
+    .limit(ADMIN_REPORTS_PAGE_SIZE)
+    .lean({ virtuals: true });
+
+  const auditWhere = { actorRole: 'dispatcher' };
+  const auditTotal = await AuditLog.countDocuments(auditWhere);
+  const auditTotalPages = Math.max(1, Math.ceil(auditTotal / ADMIN_AUDIT_PAGE_SIZE));
+  const safeAuditPage = Math.min(auditPage, auditTotalPages);
+  const auditLogs = await AuditLog.find(auditWhere)
+    .sort({ timestamp: -1 })
+    .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
+    .limit(ADMIN_AUDIT_PAGE_SIZE)
+    .lean();
   return res.status(statusCode).render('admin', {
     dispatchers,
     reports,
     auditLogs,
     stats: {
-      totalReports: reports.length,
+      totalReports: reportTotal,
       activeDispatchers: dispatchers.filter(d => d.isActive).length,
       totalDispatchers: dispatchers.length,
-      auditCount: auditLogs.length,
+      auditCount: auditTotal,
     },
+    reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
+    auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
     from,
     to,
+    tab: pickAdminTab(req.body.tab || req.query.tab),
     currentUser: req.auth,
     error: options.error || '',
     success: options.success || '',
   });
+}
+
+function pickAdminTab(tabRaw) {
+  const tab = String(tabRaw || '').trim();
+  return ['dashboard', 'reports', 'dispatchers', 'audit'].includes(tab) ? tab : 'dashboard';
+}
+
+function adminRedirectUrl(req, flash = {}) {
+  const params = new URLSearchParams();
+  const tab = pickAdminTab(req.body.tab || req.query.tab);
+  if (tab !== 'dashboard') params.set('tab', tab);
+  const reportPage = parsePositiveInt(req.body.reportPage || req.query.reportPage, 0);
+  const auditPage = parsePositiveInt(req.body.auditPage || req.query.auditPage, 0);
+  if (reportPage > 0) params.set('reportPage', String(reportPage));
+  if (auditPage > 0) params.set('auditPage', String(auditPage));
+  if (flash.ok) params.set('ok', String(flash.ok));
+  if (flash.err) params.set('err', String(flash.err));
+  const q = params.toString();
+  return q ? `/admin?${q}` : '/admin';
+}
+
+function parsePositiveInt(value, fallback = 1) {
+  const n = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function buildPaginationMeta(page, totalCount, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  return {
+    page: safePage,
+    pageSize,
+    totalCount,
+    totalPages,
+    hasPrev: safePage > 1,
+    hasNext: safePage < totalPages,
+  };
 }
 
 function escHtml(s) {
@@ -991,6 +1078,7 @@ function buildExcelHtml(reports) {
       <td>${escHtml(r.reportId || r._id)}</td>
       <td>${escHtml(r.emergencyType)}</td>
       <td>${escHtml(r.status)}</td>
+      <td>${escHtml(r.dispatcherName)}</td>
       <td>${escHtml(r.severity)}</td>
       <td>${escHtml(r.name)}</td>
       <td>${escHtml(r.contact)}</td>
@@ -1004,7 +1092,7 @@ function buildExcelHtml(reports) {
   return `<!doctype html><html><head><meta charset="utf-8"></head><body>
   <table border="1">
     <thead>
-      <tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Name</th><th>Contact</th><th>Barangay</th><th>Landmark</th><th>Street</th><th>Timestamp</th></tr>
+      <tr><th>ID</th><th>Type</th><th>Status</th><th>Dispatcher</th><th>Severity</th><th>Name</th><th>Contact</th><th>Barangay</th><th>Landmark</th><th>Street</th><th>Timestamp</th></tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
