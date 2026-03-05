@@ -149,7 +149,7 @@ app.use(async (req, res, next) => {
       const session = await Session.findOne(query).lean();
       if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
         await Session.deleteOne({ token: candidate.token });
-        clearSessionCookie(res, session && session.role ? session.role : null, candidate.cookieName);
+        clearSessionCookie(res, session && session.role ? session.role : null, candidate.cookieName, req);
         continue;
       }
 
@@ -1197,6 +1197,7 @@ async function createSession(req, res, payload) {
   const cookieName = cookieNameForRole(role);
   const currentToken = req.authToken || getCookie(req, cookieName);
   if (currentToken) await Session.deleteOne({ token: currentToken });
+  const secureCookie = shouldUseSecureCookie(req);
   const token = crypto.randomBytes(24).toString('hex');
   await Session.create({
     token,
@@ -1210,20 +1211,20 @@ async function createSession(req, res, payload) {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: 'lax',
-    secure: isHttps || process.env.NODE_ENV === 'production',
+    secure: secureCookie,
     path: '/',
   });
 
   // Clean up legacy cookie after successful role-based login.
-  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY, req);
 }
 
-function clearSessionCookie(res, role = null, explicitCookieName = '') {
+function clearSessionCookie(res, role = null, explicitCookieName = '', req = null) {
   const cookieName = explicitCookieName || (role ? cookieNameForRole(role) : COOKIE_NAME_LEGACY);
   res.clearCookie(cookieName, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: shouldUseSecureCookie(req),
     path: '/',
   });
 }
@@ -1234,10 +1235,10 @@ async function destroySession(req, res, role = '') {
   const token = role ? getCookie(req, cookieName) : (req.authToken || getCookie(req, cookieName));
   if (token) await Session.deleteOne({ token });
   if (effectiveRole) {
-    clearSessionCookie(res, effectiveRole);
+    clearSessionCookie(res, effectiveRole, '', req);
   } else {
-    clearSessionCookie(res, null, cookieName);
-    clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+    clearSessionCookie(res, null, cookieName, req);
+    clearSessionCookie(res, null, COOKIE_NAME_LEGACY, req);
   }
 }
 
@@ -1246,11 +1247,11 @@ async function destroyAllSessions(req, res) {
     const cookieName = cookieNameForRole(role);
     const token = getCookie(req, cookieName);
     if (token) await Session.deleteOne({ token });
-    clearSessionCookie(res, role);
+    clearSessionCookie(res, role, '', req);
   }
   const legacyToken = getCookie(req, COOKIE_NAME_LEGACY);
   if (legacyToken) await Session.deleteOne({ token: legacyToken });
-  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY, req);
 }
 
 function cookieNameForRole(role) {
@@ -1263,6 +1264,17 @@ function preferredRolesForPath(pathname) {
   if (p === '/dashboard' || p === '/dispatcher' || p.startsWith('/dispatcher/')) return ['dispatcher'];
   if (p.startsWith('/api/')) return ['dispatcher', 'admin'];
   return ['admin', 'dispatcher'];
+}
+
+function shouldUseSecureCookie(req) {
+  const nodeEnv = String(process.env.NODE_ENV || '').toLowerCase();
+  const forcedSecure = String(process.env.COOKIE_SECURE || '').toLowerCase();
+  if (forcedSecure === 'true' || forcedSecure === '1') return true;
+  if (forcedSecure === 'false' || forcedSecure === '0') return false;
+  if (req && req.secure) return true;
+  const xfProto = String((req && req.headers && req.headers['x-forwarded-proto']) || '').toLowerCase();
+  if (xfProto.includes('https')) return true;
+  return nodeEnv === 'production';
 }
 
 function getSessionSecret() {
