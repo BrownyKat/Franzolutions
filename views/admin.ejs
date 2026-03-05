@@ -70,12 +70,12 @@
       font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#fde68a;
       margin:11px 4px 9px;text-align:center;
     }
-    .nav{display:flex;flex-direction:column;gap:18px}
+    .nav{display:flex;flex-direction:column;gap:14px}
     .nav-item,.nav button{
       display:flex;align-items:center;gap:10px;width:100%;
       text-align:left;text-decoration:none;
       background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.24);
-      border-radius:11px;padding:10px 9px;
+      border-radius:11px;padding:14px 13px;
       color:#fff7ed;font-weight:700;font-size:15px;line-height:1.2;cursor:pointer;
       transition:transform .18s ease, border-color .18s ease, background .18s ease;
       font-family:'Outfit',sans-serif;
@@ -154,7 +154,7 @@
     .tab-panel.active{display:block}
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
     .kpi{
-      border:px solid var(--border);
+      border:1px solid var(--border);
       border-radius:14px;padding:14px 12px;background:rgba(255,255,255,.86);
       box-shadow:var(--shadow-sm);
       position:relative;overflow:hidden;
@@ -250,17 +250,6 @@
     }
     .row-form label{white-space:nowrap}
     .row-form .btn{justify-self:start;white-space:nowrap}
-    .report-filter-form{
-      grid-template-columns:repeat(3, minmax(160px, 1fr)) auto;
-      gap:10px;
-      align-items:end;
-    }
-    .report-filter-actions{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      justify-self:start;
-    }
     .dispatchers-top{
       display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
       margin-bottom:10px;
@@ -334,16 +323,14 @@
       .stats{grid-template-columns:1fr 1fr}
       .chart-grid{grid-template-columns:1fr}
       .row-form{grid-template-columns:1fr 1fr}
-      .report-filter-form{grid-template-columns:1fr 1fr}
-      .report-filter-actions{grid-column:1 / -1}
     }
     @media(max-width:860px){
       .layout{flex-direction:column}
       .side{width:100%;height:auto;position:static}
       .main{padding:14px}
       .stats{grid-template-columns:1fr}
-      .nav{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-      .nav-item,.nav button{padding:10px 9px;font-size:14px}
+      .nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .nav-item,.nav button{padding:13px 12px;font-size:14px}
       .brand-wrap{margin-bottom:10px}
     }
     @media(max-width:560px){
@@ -355,7 +342,7 @@
       .chart-canvas{height:220px !important;max-height:220px}
       .chart-canvas.compact{height:200px !important;max-height:200px}
       .nav{grid-template-columns:1fr}
-      .nav-item,.nav button{padding:9px 8px}
+      .nav-item,.nav button{padding:12px 11px}
       .row-form{grid-template-columns:1fr}
       .modal-form{grid-template-columns:1fr}
     }
@@ -442,7 +429,7 @@
           Reports
         </h2>
         <div class="filters">
-          <form method="get" action="/admin" class="row-form report-filter-form" style="width:100%">
+          <form method="get" action="/admin" class="row-form" style="width:100%">
             <input type="hidden" name="tab" value="reports">
             <input type="hidden" name="reportPage" value="1">
             <input type="hidden" name="auditPage" value="<%= (auditPager && auditPager.currentPage) || 1 %>">
@@ -463,10 +450,8 @@
                 <% }) %>
               </select>
             </div>
-            <div class="report-filter-actions">
-              <button class="btn primary" type="submit">Apply</button>
-              <a class="btn" href="/admin?tab=reports&reportPage=1&auditPage=<%= (auditPager && auditPager.currentPage) || 1 %>&reportLimit=<%= reportLimit || 20 %>&auditLimit=<%= auditLimit || 20 %>">Reset</a>
-            </div>
+            <button class="btn primary" type="submit">Apply</button>
+            <a class="btn" href="/admin?tab=reports&reportPage=1&auditPage=<%= (auditPager && auditPager.currentPage) || 1 %>&reportLimit=<%= reportLimit || 20 %>&auditLimit=<%= auditLimit || 20 %>">Reset</a>
           </form>
           <a class="btn" href="/admin/reports/export.xls?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
           <a class="btn" href="/admin/reports/export.pdf?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
