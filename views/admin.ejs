@@ -46,52 +46,43 @@
     }
     .side{
       width:312px;flex-shrink:0;
-      background:#991b1b;
-      border-right:1px solid var(--border);
-      padding:16px 14px;
+      background:linear-gradient(180deg,#7f1d1d 0%, #991b1b 45%, #7f1d1d 100%);
+      border-right:1px solid rgba(255,255,255,.18);
+      padding:18px 14px 16px;
       position:sticky;top:0;height:100vh;overflow:auto;
     }
     .brand-wrap{
-      border:1px solid var(--border);
-      border-radius:var(--r-lg);
-      background:rgba(255,255,255,.94);
-      padding:13px 12px 12px;
-      box-shadow:var(--shadow-sm);
+      padding:4px 10px 14px;
       margin-bottom:14px;
+      border-bottom:1px solid rgba(255,255,255,.22);
+      text-align:center;
     }
     .brand{
-      display:flex;align-items:center;gap:10px;
-      font-weight:800;font-size:18px;line-height:1.1;
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+      font-weight:800;font-size:18px;line-height:1.1;color:#fff7ed;
     }
-    .brand-badge{
-      width:38px;height:38px;border-radius:10px;
-      background:linear-gradient(145deg,#1d4ed8,#dc2626);
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;font-weight:900;
-      box-shadow:0 6px 16px rgba(185,28,28,.35);
-      font-family:'JetBrains Mono',monospace;
-      letter-spacing:.5px;
-      flex-shrink:0;
+    .brand-logo{
+      width:260px;height:138px;object-fit:contain;display:block;
     }
-    .sub{font-size:12px;color:#7f1d1d;margin-top:6px;}
+    .sub{font-size:12px;color:#fecaca;margin-top:6px;font-weight:600;letter-spacing:.4px;}
     .nav-title{
       font-family:'JetBrains Mono',monospace;
-      font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#fecaca;
-      margin:10px 4px 8px;
+      font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#fde68a;
+      margin:11px 4px 9px;text-align:center;
     }
-    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav{display:flex;flex-direction:column;gap:18px}
     .nav-item,.nav button{
       display:flex;align-items:center;gap:10px;width:100%;
       text-align:left;text-decoration:none;
-      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
-      border-radius:11px;padding:12px 11px;
+      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.24);
+      border-radius:11px;padding:10px 9px;
       color:#fff7ed;font-weight:700;font-size:15px;line-height:1.2;cursor:pointer;
       transition:transform .18s ease, border-color .18s ease, background .18s ease;
       font-family:'Outfit',sans-serif;
-      position:relative;
+      position:relative;backdrop-filter:blur(2px);
     }
     .nav-item svg,.nav button svg{
-      width:20px;height:20px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
+      width:20px;height:10px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
       stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
       overflow:visible;
     }
@@ -163,7 +154,7 @@
     .tab-panel.active{display:block}
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
     .kpi{
-      border:1px solid var(--border);
+      border:px solid var(--border);
       border-radius:14px;padding:14px 12px;background:rgba(255,255,255,.86);
       box-shadow:var(--shadow-sm);
       position:relative;overflow:hidden;
@@ -259,6 +250,17 @@
     }
     .row-form label{white-space:nowrap}
     .row-form .btn{justify-self:start;white-space:nowrap}
+    .report-filter-form{
+      grid-template-columns:repeat(3, minmax(160px, 1fr)) auto;
+      gap:10px;
+      align-items:end;
+    }
+    .report-filter-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      justify-self:start;
+    }
     .dispatchers-top{
       display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
       margin-bottom:10px;
@@ -332,14 +334,16 @@
       .stats{grid-template-columns:1fr 1fr}
       .chart-grid{grid-template-columns:1fr}
       .row-form{grid-template-columns:1fr 1fr}
+      .report-filter-form{grid-template-columns:1fr 1fr}
+      .report-filter-actions{grid-column:1 / -1}
     }
     @media(max-width:860px){
       .layout{flex-direction:column}
       .side{width:100%;height:auto;position:static}
       .main{padding:14px}
       .stats{grid-template-columns:1fr}
-      .nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-      .nav-item,.nav button{padding:13px 12px;font-size:14px}
+      .nav{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+      .nav-item,.nav button{padding:10px 9px;font-size:14px}
       .brand-wrap{margin-bottom:10px}
     }
     @media(max-width:560px){
@@ -351,7 +355,7 @@
       .chart-canvas{height:220px !important;max-height:220px}
       .chart-canvas.compact{height:200px !important;max-height:200px}
       .nav{grid-template-columns:1fr}
-      .nav-item,.nav button{padding:12px 11px}
+      .nav-item,.nav button{padding:9px 8px}
       .row-form{grid-template-columns:1fr}
       .modal-form{grid-template-columns:1fr}
     }
@@ -362,10 +366,10 @@
     <aside class="side">
       <div class="brand-wrap">
         <div class="brand">
-          <span class="brand-badge">SVS</span>
+          <img class="brand-logo" src="/images/logo.png" alt="MDRRMO SVS Logo">
           <span>SVS Admin Dashboard</span>
         </div>
-        <div class="sub"><%= currentUser && (currentUser.fullName || currentUser.username) %></div>
+        <div class="sub">System Administrator</div>
       </div>
       <div class="nav-title">Navigation</div>
       <nav class="nav">
@@ -438,7 +442,7 @@
           Reports
         </h2>
         <div class="filters">
-          <form method="get" action="/admin" class="row-form" style="width:100%">
+          <form method="get" action="/admin" class="row-form report-filter-form" style="width:100%">
             <input type="hidden" name="tab" value="reports">
             <input type="hidden" name="reportPage" value="1">
             <input type="hidden" name="auditPage" value="<%= (auditPager && auditPager.currentPage) || 1 %>">
@@ -459,8 +463,10 @@
                 <% }) %>
               </select>
             </div>
-            <button class="btn primary" type="submit">Apply</button>
-            <a class="btn" href="/admin?tab=reports&reportPage=1&auditPage=<%= (auditPager && auditPager.currentPage) || 1 %>&reportLimit=<%= reportLimit || 20 %>&auditLimit=<%= auditLimit || 20 %>">Reset</a>
+            <div class="report-filter-actions">
+              <button class="btn primary" type="submit">Apply</button>
+              <a class="btn" href="/admin?tab=reports&reportPage=1&auditPage=<%= (auditPager && auditPager.currentPage) || 1 %>&reportLimit=<%= reportLimit || 20 %>&auditLimit=<%= auditLimit || 20 %>">Reset</a>
+            </div>
           </form>
           <a class="btn" href="/admin/reports/export.xls?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
           <a class="btn" href="/admin/reports/export.pdf?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
@@ -703,10 +709,10 @@
   <script>
     try {
       if (!sessionStorage.getItem('svs_admin_window_ok')) {
-        window.location.replace('/admin/login?force=1');
+        window.location.replace('/login?force=1');
       }
     } catch (_e) {
-      window.location.replace('/admin/login?force=1');
+      window.location.replace('/login?force=1');
     }
 
     function safeRun(fn) {
@@ -715,7 +721,7 @@
 
     window.addEventListener('pageshow', function (event) {
       if (event.persisted) {
-        window.location.replace('/admin/login?force=1');
+        window.location.replace('/login?force=1');
       }
     });
 
@@ -920,3 +926,4 @@
   </script>
 </body>
 </html>
+

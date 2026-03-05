@@ -12,12 +12,22 @@ Icons: **Heroicons** (outlined, inline SVG). Logo: **Shield-check** mark.
 # 1. Install dependencies
 npm install
 
-# 2. Run (production)
+# 2. Copy env template
+cp .env.example .env
+
+# 3. Run (production)
 npm start
 
-# 3. Run (development, auto-reload)
+# 4. Run (development, auto-reload)
 npm run dev
 ```
+
+Required env:
+- `MONGODB_URI` (or `MONGO_URI` / `DATABASE_URL`)
+- `MONGODB_DB` (or `MONGO_DB` / `DB_NAME`; if omitted, DB name is read from URI path)
+- `SESSION_SECRET`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 
 Open in browser:
 

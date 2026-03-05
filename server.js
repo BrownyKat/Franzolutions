@@ -40,15 +40,26 @@ async function initDatabase() {
   if (dbInitPromise) return dbInitPromise;
   dbInitPromise = (async () => {
     try {
-      const mongoUri = String(process.env.MONGODB_URI || '').trim();
-      const mongoDb = String(process.env.MONGODB_DB || '').trim();
+      const mongoUri = String(
+        process.env.MONGODB_URI
+        || process.env.MONGO_URI
+        || process.env.DATABASE_URL
+        || ''
+      ).trim();
+      const mongoDb = String(
+        process.env.MONGODB_DB
+        || process.env.MONGO_DB
+        || process.env.DB_NAME
+        || extractDbNameFromMongoUri(mongoUri)
+        || ''
+      ).trim();
       if (!mongoUri) {
-        throw new Error('MONGODB_URI is not configured');
+        throw new Error('Mongo URI is not configured (set MONGODB_URI or DATABASE_URL)');
       }
       const connectOptions = {};
       if (mongoDb) connectOptions.dbName = mongoDb;
       await mongoose.connect(mongoUri, connectOptions);
-      console.log('  âœ”  MongoDB connected');
+      console.log(`  âœ”  MongoDB connected${mongoDb ? ` (db: ${mongoDb})` : ''}`);
       await ensureDefaultAdmin();
     } catch (err) {
       console.error('  âœ˜  MongoDB connection error:', err.message);
@@ -65,6 +76,20 @@ async function ensureDbReady() {
   await initDatabase();
   if (mongoose.connection.readyState !== 1) {
     throw new Error('Database is not connected');
+  }
+}
+
+function extractDbNameFromMongoUri(uriRaw) {
+  const uri = String(uriRaw || '').trim();
+  if (!uri) return '';
+  try {
+    const parsed = new URL(uri);
+    const rawPath = String(parsed.pathname || '').replace(/^\//, '').trim();
+    if (!rawPath) return '';
+    // Ignore directCollection path, keep first segment as db name.
+    return rawPath.split('/')[0].trim();
+  } catch (_err) {
+    return '';
   }
 }
 
@@ -185,7 +210,6 @@ app.get('/', (req, res) => {
 app.get('/login', (req, res) => {
   if (String(req.query.force || '') !== '1') {
     if (req.auth?.role === 'admin') return res.redirect('/admin');
-    if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
   }
   res.render('login', { error: '' });
 });
@@ -217,7 +241,6 @@ app.post('/login', async (req, res) => {
 
 app.get('/dispatcher/login', (req, res) => {
   if (String(req.query.force || '') !== '1') {
-    if (req.auth?.role === 'admin') return res.redirect('/admin');
     if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
   }
   res.render('dispatcher-login', { error: '' });
@@ -260,11 +283,8 @@ app.post('/dispatcher/login', async (req, res) => {
 });
 
 app.get('/admin/login', (req, res) => {
-  if (String(req.query.force || '') !== '1') {
-    if (req.auth?.role === 'admin') return res.redirect('/admin');
-    if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
-  }
-  res.render('admin-login', { error: '' });
+  const suffix = String(req.query.force || '') === '1' ? '?force=1' : '';
+  return res.redirect(`/login${suffix}`);
 });
 
 app.post('/admin/login', async (req, res) => {
@@ -273,11 +293,11 @@ app.post('/admin/login', async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     if (!username || !password) {
-      return res.status(400).render('admin-login', { error: 'Invalid login details.' });
+      return res.status(400).render('login', { error: 'Invalid login details.' });
     }
     const admin = await Admin.findOne({ username });
     if (!admin || !verifyPassword(password, admin.passwordHash)) {
-      return res.status(401).render('admin-login', { error: 'Invalid admin credentials.' });
+      return res.status(401).render('login', { error: 'Invalid admin credentials.' });
     }
     await createSession(req, res, {
       role: 'admin',
@@ -288,7 +308,7 @@ app.post('/admin/login', async (req, res) => {
     return res.redirect('/admin');
   } catch (err) {
     console.error('[login] admin/login failed:', err && err.message ? err.message : err);
-    res.status(500).render('admin-login', { error: 'Login failed. Please try again.' });
+    res.status(500).render('login', { error: 'Login failed. Please try again.' });
   }
 });
 
@@ -462,7 +482,7 @@ app.post('/api/dispatcher/profile', requireRolesApi(['dispatcher']), async (req,
   }
 });
 
-app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.get('/admin', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
     const reportLimit = parsePerPage(req.query.reportLimit, 20);
@@ -529,7 +549,7 @@ app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) 
   }
 });
 
-app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.post('/admin/dispatchers', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const username = String(req.body.username || '').trim();
     const fullName = String(req.body.fullName || '').trim();
@@ -556,7 +576,7 @@ app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), asyn
   }
 });
 
-app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const dispatcher = await Dispatcher.findById(req.params.id);
     if (!dispatcher) return res.redirect('/admin?err=Dispatcher%20not%20found');
@@ -579,7 +599,7 @@ app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/lo
   }
 });
 
-app.post('/admin/dispatchers/:id/delete', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.post('/admin/dispatchers/:id/delete', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     await Dispatcher.findByIdAndDelete(req.params.id);
     res.redirect('/admin?ok=Dispatcher%20deleted');
@@ -589,7 +609,7 @@ app.post('/admin/dispatchers/:id/delete', requireRolesPage(['admin'], '/admin/lo
   }
 });
 
-app.get('/admin/reports/export.xls', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.get('/admin/reports/export.xls', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const { where } = buildReportDateRangeFilter(req.query.from, req.query.to);
     const reports = await Report.find(where).sort({ timestamp: -1 }).lean({ virtuals: true });
@@ -604,7 +624,7 @@ app.get('/admin/reports/export.xls', requireRolesPage(['admin'], '/admin/login')
   }
 });
 
-app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
     const reports = await Report.find(where).sort({ timestamp: -1 }).lean({ virtuals: true });
@@ -636,7 +656,7 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
   }
 });
 
-app.post('/admin/reports/clear', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+app.post('/admin/reports/clear', requireRolesPage(['admin'], '/login'), async (req, res) => {
   try {
     const beforeCount = await Report.countDocuments({});
     await Report.deleteMany({});
@@ -1767,7 +1787,7 @@ if (require.main === module) {
     console.log(`\n  MDRRMO running on http://localhost:${PORT}`);
     console.log(`  Reporter        -> http://localhost:${PORT}/report`);
     console.log(`  Dispatcher      -> http://localhost:${PORT}/dispatcher/login`);
-    console.log(`  Admin           -> http://localhost:${PORT}/admin/login`);
+    console.log(`  Admin           -> http://localhost:${PORT}/login`);
     console.log(`  Dispatcher UI   -> http://localhost:${PORT}/dashboard`);
     console.log(`  Admin Console   -> http://localhost:${PORT}/admin\n`);
   });
