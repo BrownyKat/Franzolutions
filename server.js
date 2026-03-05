@@ -18,7 +18,11 @@ const Session     = require('./models/Session');
 const app    = express();
 const server = http.createServer(app);
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
-const COOKIE_NAME = 'auth_token';
+const COOKIE_NAME_LEGACY = 'auth_token';
+const ROLE_COOKIE_NAMES = {
+  admin: 'auth_token_admin',
+  dispatcher: 'auth_token_dispatcher',
+};
 const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
 const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
   ? new Pusher({
@@ -47,27 +51,45 @@ void initDatabase();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(async (req, res, next) => {
-  const token = getCookie(req, COOKIE_NAME);
-  if (!token) return next();
-  try {
-    const session = await Session.findOne({ token }).lean();
-    if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
-      await Session.deleteOne({ token });
-      clearSessionCookie(res);
-      return next();
-    }
+  const roleOrder = preferredRolesForPath(req.path);
+  const candidates = [];
 
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    await Session.updateOne({ token }, { $set: { expiresAt } });
-    req.auth = {
-      role: session.role,
-      userId: session.userId,
-      username: session.username,
-      fullName: session.fullName,
-      expiresAt: expiresAt.getTime(),
-    };
-    req.authToken = token;
-    res.locals.auth = req.auth;
+  for (const role of roleOrder) {
+    const token = getCookie(req, cookieNameForRole(role));
+    if (token) candidates.push({ role, token, cookieName: cookieNameForRole(role) });
+  }
+
+  // Backward compatibility for older single-cookie sessions.
+  const legacyToken = getCookie(req, COOKIE_NAME_LEGACY);
+  if (legacyToken) candidates.push({ role: '', token: legacyToken, cookieName: COOKIE_NAME_LEGACY });
+
+  if (!candidates.length) return next();
+  try {
+    for (const candidate of candidates) {
+      const query = candidate.role
+        ? { token: candidate.token, role: candidate.role }
+        : { token: candidate.token };
+      const session = await Session.findOne(query).lean();
+      if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
+        await Session.deleteOne({ token: candidate.token });
+        clearSessionCookie(res, session && session.role ? session.role : null, candidate.cookieName);
+        continue;
+      }
+
+      const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+      await Session.updateOne({ token: candidate.token }, { $set: { expiresAt } });
+      req.auth = {
+        role: session.role,
+        userId: session.userId,
+        username: session.username,
+        fullName: session.fullName,
+        expiresAt: expiresAt.getTime(),
+      };
+      req.authToken = candidate.token;
+      req.authCookieName = cookieNameForRole(session.role);
+      res.locals.auth = req.auth;
+      break;
+    }
   } catch (err) {
     console.error('[auth] session lookup failed:', err && err.message ? err.message : err);
   }
@@ -202,20 +224,20 @@ app.post('/admin/login', async (req, res) => {
 });
 
 app.post('/logout', async (req, res) => {
-  await destroySession(req, res);
+  await destroyAllSessions(req, res);
   res.redirect('/login');
 });
 
 async function handleAdminLogout(req, res) {
-  await destroySession(req, res);
-  res.redirect('/login');
+  await destroySession(req, res, 'admin');
+  res.redirect('/admin/login');
 }
 app.post('/admin/logout', handleAdminLogout);
 app.get('/admin/logout', handleAdminLogout);
 app.all('/admin/logout', handleAdminLogout);
 
 async function handleDispatcherLogout(req, res) {
-  await destroySession(req, res);
+  await destroySession(req, res, 'dispatcher');
   res.redirect('/dispatcher/login');
 }
 app.post('/dispatcher/logout', handleDispatcherLogout);
@@ -223,7 +245,7 @@ app.get('/dispatcher/logout', handleDispatcherLogout);
 app.all('/dispatcher/logout', handleDispatcherLogout);
 
 app.get('/logout', async (req, res) => {
-  await destroySession(req, res);
+  await destroyAllSessions(req, res);
   res.redirect('/login');
 });
 
@@ -800,7 +822,9 @@ function getCookie(req, name) {
 }
 
 async function createSession(req, res, payload) {
-  const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
+  const role = payload.role;
+  const cookieName = cookieNameForRole(role);
+  const currentToken = req.authToken || getCookie(req, cookieName);
   if (currentToken) await Session.deleteOne({ token: currentToken });
   const token = crypto.randomBytes(24).toString('hex');
   await Session.create({
@@ -811,26 +835,61 @@ async function createSession(req, res, payload) {
     fullName: payload.fullName,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
   });
-  res.cookie(COOKIE_NAME, token, {
+  res.cookie(cookieName, token, {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
   });
+
+  // Clean up legacy cookie after successful role-based login.
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
 }
 
-function clearSessionCookie(res) {
-  res.clearCookie(COOKIE_NAME, {
+function clearSessionCookie(res, role = null, explicitCookieName = '') {
+  const cookieName = explicitCookieName || (role ? cookieNameForRole(role) : COOKIE_NAME_LEGACY);
+  res.clearCookie(cookieName, {
     httpOnly: true,
     sameSite: 'lax',
     path: '/',
   });
 }
 
-async function destroySession(req, res) {
-  const token = req.authToken || getCookie(req, COOKIE_NAME);
+async function destroySession(req, res, role = '') {
+  const effectiveRole = role || (req.auth && req.auth.role) || '';
+  const cookieName = effectiveRole ? cookieNameForRole(effectiveRole) : (req.authCookieName || COOKIE_NAME_LEGACY);
+  const token = role ? getCookie(req, cookieName) : (req.authToken || getCookie(req, cookieName));
   if (token) await Session.deleteOne({ token });
-  clearSessionCookie(res);
+  if (effectiveRole) {
+    clearSessionCookie(res, effectiveRole);
+  } else {
+    clearSessionCookie(res, null, cookieName);
+    clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+  }
+}
+
+async function destroyAllSessions(req, res) {
+  for (const role of Object.keys(ROLE_COOKIE_NAMES)) {
+    const cookieName = cookieNameForRole(role);
+    const token = getCookie(req, cookieName);
+    if (token) await Session.deleteOne({ token });
+    clearSessionCookie(res, role);
+  }
+  const legacyToken = getCookie(req, COOKIE_NAME_LEGACY);
+  if (legacyToken) await Session.deleteOne({ token: legacyToken });
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+}
+
+function cookieNameForRole(role) {
+  return ROLE_COOKIE_NAMES[role] || COOKIE_NAME_LEGACY;
+}
+
+function preferredRolesForPath(pathname) {
+  const p = String(pathname || '');
+  if (p === '/admin' || p.startsWith('/admin/')) return ['admin'];
+  if (p === '/dashboard' || p === '/dispatcher' || p.startsWith('/dispatcher/')) return ['dispatcher'];
+  if (p.startsWith('/api/')) return ['dispatcher', 'admin'];
+  return ['admin', 'dispatcher'];
 }
 
 function requireRolesPage(roles, loginPath = '/dispatcher/login') {
