@@ -16,6 +16,10 @@ const reportSchema = new mongoose.Schema(
     status:        { type: String, default: 'new', enum: ['new','verifying','dispatched','resolved','false-report'] },
     credibility:   { type: String, default: 'low',  enum: ['low','medium','high'] },
     isPanic:       { type: Boolean, default: false },
+    assignedToId:  { type: String, default: '' },
+    assignedToUsername: { type: String, default: '' },
+    assignedToName:{ type: String, default: '' },
+    assignedAt:    { type: Date, default: null },
     timestamp:     { type: Date,   default: Date.now },
   },
   { versionKey: false }

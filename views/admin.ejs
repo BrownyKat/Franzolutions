@@ -8,22 +8,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f3ece3;
+      --bg:#fff1f2;
       --card:#ffffff;
-      --card-soft:#fffaf3;
-      --border:#e2d4c3;
-      --border-strong:#cfbca7;
-      --text:#1f180f;
-      --muted:#6f624f;
-      --muted2:#9a8b75;
-      --amber:#d97706;
-      --amber-soft:#ffedd5;
-      --amber-strong:#9a3412;
-      --blue:#1d4ed8;
-      --green:#059669;
-      --red:#b91c1c;
-      --shadow-sm:0 2px 8px rgba(0,0,0,.05);
-      --shadow-md:0 10px 24px rgba(0,0,0,.08);
+      --card-soft:#fff7ed;
+      --border:#f5c08a;
+      --border-strong:#f59e0b;
+      --text:#3f1d1d;
+      --muted:#7f1d1d;
+      --muted2:#b45309;
+      --amber:#facc15;
+      --amber-soft:#fefce8;
+      --amber-strong:#ca8a04;
+      --blue:#dc2626;
+      --green:#ef4444;
+      --red:#dc2626;
+      --shadow-sm:0 2px 8px rgba(127,29,29,.10);
+      --shadow-md:0 10px 24px rgba(127,29,29,.15);
       --r-md:12px;
       --r-lg:16px;
       --r-xl:20px;
@@ -35,14 +35,18 @@
       font-family:'Outfit',sans-serif;
       color:var(--text);
       background:
-        radial-gradient(900px 520px at 90% -10%, #ffe8bf 0%, transparent 58%),
-        radial-gradient(600px 360px at -10% 110%, #e4f3ff 0%, transparent 60%),
+        radial-gradient(900px 520px at 90% -10%, rgba(220,38,38,.22) 0%, transparent 58%),
+        radial-gradient(640px 380px at -10% 110%, rgba(250,204,21,.36) 0%, transparent 60%),
         var(--bg);
     }
-    .layout{display:flex;min-height:100vh}
+    .layout{display:flex;min-height:100vh;animation:fadeUp .45s ease both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @media (prefers-reduced-motion: reduce){
+      .layout,*{animation:none!important;transition:none!important}
+    }
     .side{
       width:312px;flex-shrink:0;
-      background:linear-gradient(180deg,#fffdfa,#fff8ef);
+      background:#991b1b;
       border-right:1px solid var(--border);
       padding:16px 14px;
       position:sticky;top:0;height:100vh;overflow:auto;
@@ -50,42 +54,41 @@
     .brand-wrap{
       border:1px solid var(--border);
       border-radius:var(--r-lg);
-      background:#fff;
+      background:rgba(255,255,255,.94);
       padding:13px 12px 12px;
       box-shadow:var(--shadow-sm);
       margin-bottom:14px;
     }
     .brand{
       display:flex;align-items:center;gap:10px;
-      font-weight:900;font-size:20px;line-height:1.1;
+      font-weight:800;font-size:18px;line-height:1.1;
     }
     .brand-badge{
       width:38px;height:38px;border-radius:10px;
-      background:linear-gradient(145deg,#f59e0b,#d97706);
+      background:linear-gradient(145deg,#1d4ed8,#dc2626);
       display:flex;align-items:center;justify-content:center;
       color:#fff;font-weight:900;
-      box-shadow:0 6px 16px rgba(217,119,6,.35);
+      box-shadow:0 6px 16px rgba(185,28,28,.35);
       font-family:'JetBrains Mono',monospace;
       letter-spacing:.5px;
       flex-shrink:0;
     }
-    .sub{
-      font-size:12px;color:var(--muted);margin-top:6px;
-    }
+    .sub{font-size:12px;color:#7f1d1d;margin-top:6px;}
     .nav-title{
       font-family:'JetBrains Mono',monospace;
-      font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2);
+      font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#fecaca;
       margin:10px 4px 8px;
     }
     .nav{display:flex;flex-direction:column;gap:8px}
     .nav-item,.nav button{
       display:flex;align-items:center;gap:10px;width:100%;
       text-align:left;text-decoration:none;
-      background:#fff;border:1px solid var(--border);
-      border-radius:14px;padding:14px 13px;
-      color:var(--text);font-weight:800;font-size:18px;line-height:1.2;cursor:pointer;
-      transition:.18s ease;
+      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+      border-radius:11px;padding:12px 11px;
+      color:#fff7ed;font-weight:700;font-size:15px;line-height:1.2;cursor:pointer;
+      transition:transform .18s ease, border-color .18s ease, background .18s ease;
       font-family:'Outfit',sans-serif;
+      position:relative;
     }
     .nav-item svg,.nav button svg{
       width:20px;height:20px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
@@ -93,19 +96,45 @@
       overflow:visible;
     }
     .nav-item:hover,.nav button:hover{
-      border-color:var(--border-strong);background:#fff7eb;transform:translateY(-1px);
+      border-color:#fde68a;background:rgba(250,204,21,.18);transform:translateY(-1px);
     }
     .nav-item.active{
-      background:linear-gradient(180deg,#fff8ed,#ffefdb);
-      border-color:#f4c99c;color:var(--amber-strong);
-      box-shadow:0 0 0 2px rgba(217,119,6,.10) inset;
+      background:linear-gradient(180deg,rgba(250,204,21,.28),rgba(254,240,138,.24));
+      border-color:#fde047;color:#fefce8;
+      box-shadow:0 0 0 2px rgba(250,204,21,.24) inset;
+    }
+    .nav-item.active::before{
+      content:'';
+      position:absolute;left:0;top:0;bottom:0;width:4px;
+      background:linear-gradient(180deg,#dc2626,#facc15);
+      border-radius:14px 0 0 14px;
     }
     .main{flex:1;min-width:0;padding:22px}
     .top{
       display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
-      padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:var(--shadow-sm);
+      padding:10px 14px;border:1px solid var(--border);border-radius:14px;background:rgba(255,255,255,.75);box-shadow:var(--shadow-sm);
     }
     .top h1{margin:0;font-size:1.5rem;letter-spacing:-.5px}
+    .admin-dt{
+      display:flex;align-items:center;gap:10px;
+      padding:.62rem 1.05rem;min-height:66px;
+      background:linear-gradient(165deg,#0B1220,#05080F);
+      border:1.5px solid #FACC15;border-radius:14px;
+      color:#A7F3D0;white-space:nowrap;
+      box-shadow:inset 0 0 0 1px rgba(250,204,21,.18),0 10px 24px rgba(2,6,23,.28);
+    }
+    .admin-dt svg{width:24px;height:18px;stroke:#60A5FA;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+    .admin-time-block{display:flex;flex-direction:column;line-height:1.05}
+    .admin-clock{
+      font-family:'JetBrains Mono',monospace;
+      font-size:1.12rem;font-weight:800;letter-spacing:1px;color:#86EFAC;
+      text-shadow:0 0 12px rgba(134,239,172,.22);
+    }
+    .admin-date{
+      font-family:'JetBrains Mono',monospace;
+      font-size:.66rem;font-weight:700;letter-spacing:.7px;color:#93C5FD;
+      margin-top:4px;
+    }
     .chip{
       display:inline-flex;align-items:center;gap:7px;
       font-size:12px;color:var(--muted);
@@ -114,8 +143,8 @@
     }
     .chip svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
     .msg{padding:11px 12px;border-radius:10px;margin-top:12px;font-size:13px;font-weight:600}
-    .ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
-    .err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+    .ok{background:#fefce8;border:1px solid #fde047;color:#854d0e}
+    .err{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
     .section{
       margin-top:16px;background:var(--card-soft);
       border:1px solid var(--border);border-radius:var(--r-xl);
@@ -135,16 +164,16 @@
     .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
     .kpi{
       border:1px solid var(--border);
-      border-radius:14px;padding:14px 12px;background:#fff;
+      border-radius:14px;padding:14px 12px;background:rgba(255,255,255,.86);
       box-shadow:var(--shadow-sm);
       position:relative;overflow:hidden;
     }
     .kpi::before{
       content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px;background:#eab308;
     }
-    .kpi:nth-child(2)::before{background:var(--blue)}
-    .kpi:nth-child(3)::before{background:var(--green)}
-    .kpi:nth-child(4)::before{background:#7c3aed}
+    .kpi:nth-child(2)::before{background:#f97316}
+    .kpi:nth-child(3)::before{background:#dc2626}
+    .kpi:nth-child(4)::before{background:#ef4444}
     .kpi .k{
       font-family:'JetBrains Mono',monospace;
       font-size:11px;color:var(--muted2);text-transform:uppercase;font-weight:700;letter-spacing:.8px
@@ -192,6 +221,22 @@
     .btn:hover{border-color:var(--border-strong);background:#fff7eb}
     .btn.primary{background:var(--amber);border-color:var(--amber);color:#fff}
     .btn.primary:hover{background:#b45309}
+    .pager{
+      margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+      padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;
+    }
+    .pager-meta{
+      font-size:13px;color:var(--muted);
+      font-family:'JetBrains Mono',monospace;
+    }
+    .pager-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .page-link{
+      display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:32px;
+      padding:0 10px;border:1px solid #d8cdbd;border-radius:8px;background:#fff;
+      text-decoration:none;color:#3f1d1d;font-weight:700;font-size:13px;
+    }
+    .page-link.active{background:#fef3c7;border-color:#f59e0b;color:#92400e}
+    .page-link:hover{border-color:var(--border-strong);background:#fff7eb}
     .table-wrap{
       margin-top:10px;border:1px solid var(--border);border-radius:12px;overflow:auto;background:#fff;
     }
@@ -317,8 +362,8 @@
     <aside class="side">
       <div class="brand-wrap">
         <div class="brand">
-          <span class="brand-badge">AD</span>
-          <span>Admin Dashboard</span>
+          <span class="brand-badge">SVS</span>
+          <span>SVS Admin Dashboard</span>
         </div>
         <div class="sub"><%= currentUser && (currentUser.fullName || currentUser.username) %></div>
       </div>
@@ -336,7 +381,7 @@
         <button class="nav-item" type="button" data-tab="audit">
           <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg> Audit Trail
         </button>
-        <form method="get" action="/admin/logout" style="margin:0">
+        <form method="get" action="/admin/logout" style="margin:0" id="adminLogoutForm">
           <button type="submit">
             <svg viewBox="0 0 24 24"><path d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3-3-3-3m3 3-3 3m3-3H9"/></svg>
             Logout
@@ -347,7 +392,14 @@
 
     <main class="main">
       <div class="top">
-        <h1>Admin Console</h1>
+        <h1>SVS Admin Console</h1>
+        <div class="admin-dt" id="adminDateTime">
+          <svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg>
+          <div class="admin-time-block">
+            <div class="admin-clock" id="adminClock">--:--:--</div>
+            <div class="admin-date" id="adminDate">--- --- --/--/----</div>
+          </div>
+        </div>
       </div>
 
       <% if (success) { %><div class="msg ok"><%= success %></div><% } %>
@@ -385,23 +437,40 @@
           <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25"/></svg>
           Reports
         </h2>
-        <form class="filters" method="get" action="/admin">
-          <div class="f">
-            <label for="from">From</label>
-            <input id="from" type="date" name="from" value="<%= from || '' %>">
-          </div>
-          <div class="f">
-            <label for="to">To</label>
-            <input id="to" type="date" name="to" value="<%= to || '' %>">
-          </div>
-          <button class="btn" type="submit">Apply</button>
-          <a class="btn" href="/admin">Reset</a>
+        <div class="filters">
+          <form method="get" action="/admin" class="row-form" style="width:100%">
+            <input type="hidden" name="tab" value="reports">
+            <input type="hidden" name="reportPage" value="1">
+            <input type="hidden" name="auditPage" value="<%= (auditPager && auditPager.currentPage) || 1 %>">
+            <input type="hidden" name="auditLimit" value="<%= auditLimit || 20 %>">
+            <div class="f">
+              <label for="fromDate">From</label>
+              <input id="fromDate" type="date" name="from" value="<%= from || '' %>">
+            </div>
+            <div class="f">
+              <label for="toDate">To</label>
+              <input id="toDate" type="date" name="to" value="<%= to || '' %>">
+            </div>
+            <div class="f">
+              <label for="reportLimitSel">Rows</label>
+              <select id="reportLimitSel" name="reportLimit" class="btn">
+                <% [10,20,40,80,100,200].forEach(function(n){ %>
+                  <option value="<%= n %>" <%= Number(reportLimit) === n ? 'selected' : '' %>><%= n %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button class="btn primary" type="submit">Apply</button>
+            <a class="btn" href="/admin?tab=reports&reportPage=1&auditPage=<%= (auditPager && auditPager.currentPage) || 1 %>&reportLimit=<%= reportLimit || 20 %>&auditLimit=<%= auditLimit || 20 %>">Reset</a>
+          </form>
           <a class="btn" href="/admin/reports/export.xls?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export Excel</a>
           <a class="btn" href="/admin/reports/export.pdf?from=<%= encodeURIComponent(from || '') %>&to=<%= encodeURIComponent(to || '') %>">Export PDF</a>
-        </form>
+          <form method="post" action="/admin/reports/clear" style="margin:0" onsubmit="return confirm('Delete ALL reported data from the database? This cannot be undone.');">
+            <button class="btn warn" type="submit">Delete All Reports</button>
+          </form>
+        </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Reporter</th><th>Location</th><th>Timestamp</th></tr></thead>
+            <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Dispatcher</th><th>Reporter</th><th>Location</th><th>Timestamp</th></tr></thead>
             <tbody>
               <% reports.forEach(function(r){ %>
               <tr>
@@ -409,6 +478,7 @@
                 <td><%= r.emergencyType || '-' %></td>
                 <td><%= r.status || '-' %></td>
                 <td><%= r.severity || '-' %></td>
+                <td><%= r.assignedDispatcher || r.assignedToUsername || '-' %></td>
                 <td><%= r.name || '-' %><br><span style="font-size:12px;color:#6f644f"><%= r.contact || '-' %></span></td>
                 <td><%= [r.street, r.landmark, r.barangay].filter(Boolean).join(', ') || '-' %></td>
                 <td><%= new Date(r.timestamp).toLocaleString() %></td>
@@ -416,6 +486,25 @@
               <% }) %>
             </tbody>
           </table>
+        </div>
+        <div class="pager">
+          <div class="pager-meta">
+            Reports page <%= (reportPager && reportPager.currentPage) || 1 %> of <%= (reportPager && reportPager.totalPages) || 1 %>
+            (<%= (reportPager && reportPager.totalCount) || 0 %> total)
+          </div>
+          <div class="pager-links">
+            <% if (reportPager && reportPager.hasPrev) { %>
+              <a class="page-link" href="<%= reportPager.prevUrl %>">Prev</a>
+            <% } %>
+            <% if (reportPager && Array.isArray(reportPager.pages)) { %>
+              <% reportPager.pages.forEach(function(p){ %>
+                <a class="page-link <%= p.isCurrent ? 'active' : '' %>" href="<%= p.url %>"><%= p.n %></a>
+              <% }) %>
+            <% } %>
+            <% if (reportPager && reportPager.hasNext) { %>
+              <a class="page-link" href="<%= reportPager.nextUrl %>">Next</a>
+            <% } %>
+          </div>
         </div>
       </section>
 
@@ -471,21 +560,59 @@
           <svg viewBox="0 0 24 24"><path d="M12 6v6l4 2m5-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           Audit Trail (Dispatcher Actions)
         </h2>
+        <div class="filters">
+          <form method="get" action="/admin" class="row-form" style="width:100%">
+            <input type="hidden" name="tab" value="audit">
+            <input type="hidden" name="reportPage" value="<%= (reportPager && reportPager.currentPage) || 1 %>">
+            <input type="hidden" name="reportLimit" value="<%= reportLimit || 20 %>">
+            <input type="hidden" name="from" value="<%= from || '' %>">
+            <input type="hidden" name="to" value="<%= to || '' %>">
+            <input type="hidden" name="auditPage" value="1">
+            <div class="f">
+              <label for="auditLimitSel">Rows</label>
+              <select id="auditLimitSel" name="auditLimit" class="btn">
+                <% [10,20,40,80,100,200].forEach(function(n){ %>
+                  <option value="<%= n %>" <%= Number(auditLimit) === n ? 'selected' : '' %>><%= n %></option>
+                <% }) %>
+              </select>
+            </div>
+            <button class="btn primary" type="submit">Apply</button>
+          </form>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Timestamp</th><th>Dispatcher</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
             <tbody>
               <% auditLogs.forEach(function(a){ %>
-              <tr>
-                <td><%= new Date(a.timestamp).toLocaleString() %></td>
-                <td><%= a.actorName || a.actorId || '-' %></td>
-                <td><%= a.action || '-' %></td>
-                <td><%= a.targetType || '-' %> <%= a.targetId || '' %></td>
-                <td><%= a.details || '-' %></td>
-              </tr>
+                <tr>
+                  <td><%= new Date(a.timestamp).toLocaleString() %></td>
+                  <td><%= a.actorName || a.actorId || '-' %></td>
+                  <td><%= a.action || '-' %></td>
+                  <td><%= a.targetType || '-' %> <%= a.targetId || '' %></td>
+                  <td><%= a.details || '-' %></td>
+                </tr>
               <% }) %>
             </tbody>
           </table>
+        </div>
+        <div class="pager">
+          <div class="pager-meta">
+            Audit page <%= (auditPager && auditPager.currentPage) || 1 %> of <%= (auditPager && auditPager.totalPages) || 1 %>
+            (<%= (auditPager && auditPager.totalCount) || 0 %> total)
+          </div>
+          <div class="pager-links">
+            <% if (auditPager && auditPager.hasPrev) { %>
+              <a class="page-link" href="<%= auditPager.prevUrl %>">Prev</a>
+            <% } %>
+            <% if (auditPager && Array.isArray(auditPager.pages)) { %>
+              <% auditPager.pages.forEach(function(p){ %>
+                <a class="page-link <%= p.isCurrent ? 'active' : '' %>" href="<%= p.url %>"><%= p.n %></a>
+              <% }) %>
+            <% } %>
+            <% if (auditPager && auditPager.hasNext) { %>
+              <a class="page-link" href="<%= auditPager.nextUrl %>">Next</a>
+            <% } %>
+          </div>
         </div>
       </section>
     </main>
@@ -574,19 +701,43 @@
   <script id="reportsSeed" type="application/json"><%- JSON.stringify(reports) %></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
+    try {
+      if (!sessionStorage.getItem('svs_admin_window_ok')) {
+        window.location.replace('/admin/login?force=1');
+      }
+    } catch (_e) {
+      window.location.replace('/admin/login?force=1');
+    }
+
+    function safeRun(fn) {
+      try { fn(); } catch (e) { console.error('[admin-ui]', e); }
+    }
+
     window.addEventListener('pageshow', function (event) {
       if (event.persisted) {
-        window.location.replace('/login');
+        window.location.replace('/admin/login?force=1');
       }
     });
 
     const navItems = Array.from(document.querySelectorAll('.nav-item[data-tab]'));
     const panels = Array.from(document.querySelectorAll('.tab-panel[data-panel]'));
+    const adminLogoutForm = document.getElementById('adminLogoutForm');
+    if (adminLogoutForm) {
+      adminLogoutForm.addEventListener('submit', () => {
+        try { sessionStorage.removeItem('svs_admin_window_ok'); } catch (_e) {}
+      });
+    }
     function showTab(tab) {
       navItems.forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
       panels.forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
     }
     navItems.forEach(n => n.addEventListener('click', () => showTab(n.dataset.tab)));
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    if (initialTab && panels.some(p => p.dataset.panel === initialTab)) {
+      showTab(initialTab);
+    } else {
+      showTab('dashboard');
+    }
 
     function openModal(sel) {
       const el = document.querySelector(sel);
@@ -663,7 +814,7 @@
       if (String((r && r.status) || '') === 'false-report') falseCount += 1;
     });
 
-    if (window.Chart) {
+    if (window.Chart && document.getElementById('trendChart') && document.getElementById('severityChart') && document.getElementById('falseChart')) {
       const byDay = {};
       reportsData.forEach(r => {
         const d = new Date(r && r.timestamp);
@@ -672,7 +823,7 @@
         byDay[key] = (byDay[key] || 0) + 1;
       });
       const trendEntries = Object.entries(byDay).sort((a,b) => a[0].localeCompare(b[0]));
-      new Chart(document.getElementById('trendChart'), {
+      safeRun(() => new Chart(document.getElementById('trendChart'), {
         type: 'line',
         data: {
           labels: trendEntries.map(x => x[0]),
@@ -696,9 +847,9 @@
             y: { beginAtZero: true, ticks: { precision: 0, color: '#6f624f' } }
           }
         }
-      });
+      }));
 
-      new Chart(document.getElementById('severityChart'), {
+      safeRun(() => new Chart(document.getElementById('severityChart'), {
         type: 'bar',
         data: {
           labels: ['Low', 'Medium', 'High'],
@@ -718,10 +869,10 @@
             y: { beginAtZero: true, ticks: { precision: 0, color: '#6f624f' } }
           }
         }
-      });
+      }));
 
       const total = reportsData.length;
-      new Chart(document.getElementById('falseChart'), {
+      safeRun(() => new Chart(document.getElementById('falseChart'), {
         type: 'pie',
         data: {
           labels: ['False Reports', 'Other Reports'],
@@ -735,8 +886,37 @@
             tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw}` } }
           }
         }
-      });
+      }));
     }
+
+    function updateAdminDateTime() {
+      const clockEl = document.getElementById('adminClock');
+      const dateEl = document.getElementById('adminDate');
+      if (!clockEl || !dateEl) return;
+      const now = new Date();
+      const date = now.toLocaleDateString(undefined, {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit'
+      });
+      const time = now.toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      clockEl.textContent = time;
+      dateEl.textContent = date;
+    }
+    updateAdminDateTime();
+    setInterval(updateAdminDateTime, 1000);
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[admin-ui] unhandled rejection', event && event.reason ? event.reason : event);
+    });
+    window.addEventListener('error', (event) => {
+      console.error('[admin-ui] runtime error', event && event.error ? event.error : event);
+    });
   </script>
 </body>
 </html>

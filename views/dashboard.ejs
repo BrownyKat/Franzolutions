@@ -3,55 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MDRRMO — Dispatcher Dashboard</title>
+  <title>SVS — Dispatcher Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --amber:        #F59E0B;
-      --amber-dark:   #D97706;
-      --amber-deep:   #B45309;
-      --amber-light:  #FFFBEB;
-      --amber-border: #FCD34D;
-      --orange:       #EA580C;
-      --orange-light: #FFF7ED;
-      --orange-border:#FDBA74;
+      --amber:        #FACC15;
+      --amber-dark:   #EAB308;
+      --amber-deep:   #CA8A04;
+      --amber-light:  #FEFCE8;
+      --amber-border: #FDE047;
+      --orange:       #DC2626;
+      --orange-light: #FEF2F2;
+      --orange-border:#FCA5A5;
       --red:          #DC2626;
       --red-light:    #FEF2F2;
-      --red-border:   #FECACA;
-      --green:        #059669;
-      --green-light:  #ECFDF5;
-      --green-border: #A7F3D0;
+      --red-border:   #FCA5A5;
+      --green:        #2563EB;
+      --green-light:  #DBEAFE;
+      --green-border: #93C5FD;
       --blue:         #1D4ED8;
       --blue-light:   #EFF6FF;
       --blue-border:  #BFDBFE;
-      --indigo:       #4338CA;
-      --bg:           #F1EDE5;
-      --surface:      #FFFFFF;
-      --surface2:     #FAF8F4;
-      --border:       #E2DAD0;
-      --border-mid:   #CEC4B4;
-      --text:         #18120A;
-      --text2:        #433720;
-      --muted:        #7A6A50;
-      --muted2:       #A89880;
-      --shadow-xs: 0 1px 2px rgba(0,0,0,.05);
-      --shadow-sm: 0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
-      --shadow-md: 0 4px 14px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.04);
-      --shadow-lg: 0 12px 36px rgba(0,0,0,.10),0 4px 14px rgba(0,0,0,.05);
-      --shadow-xl: 0 24px 56px rgba(0,0,0,.12),0 8px 20px rgba(0,0,0,.06);
+      --indigo:       #1E3A8A;
+      --bg:           #E6F0FF;
+      --surface:      #F4F8FF;
+      --surface2:     #E7F0FF;
+      --border:       #BDD3F2;
+      --border-mid:   #9ABCE8;
+      --text:         #0F172A;
+      --text2:        #1E3A8A;
+      --muted:        #334155;
+      --muted2:       #64748B;
+      --shadow-xs: 0 1px 2px rgba(15,23,42,.06);
+      --shadow-sm: 0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.05);
+      --shadow-md: 0 4px 14px rgba(15,23,42,.10),0 2px 6px rgba(15,23,42,.06);
+      --shadow-lg: 0 12px 36px rgba(15,23,42,.12),0 4px 14px rgba(15,23,42,.07);
+      --shadow-xl: 0 24px 56px rgba(15,23,42,.14),0 8px 20px rgba(15,23,42,.08);
       --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    body{
+      font-family:'Outfit',sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;
+      min-height:100vh;display:flex;flex-direction:column;overflow:hidden;
+      background:
+        radial-gradient(760px 460px at 110% -10%, rgba(29,78,216,.26), transparent 62%),
+        radial-gradient(620px 360px at -8% 108%, rgba(250,204,21,.24), transparent 64%),
+        radial-gradient(420px 260px at 70% 85%, rgba(59,130,246,.16), transparent 68%),
+        var(--bg);
+    }
     ::-webkit-scrollbar{width:5px;height:5px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:99px;}
 
     /* ── HEADER ── */
     .header{
-      height:64px;flex-shrink:0;
+      height:84px;flex-shrink:0;
       display:flex;align-items:center;justify-content:space-between;
       padding:0 1.5rem;
-      background:rgba(255,255,255,.94);
+      background:rgba(232,242,255,.92);
       backdrop-filter:blur(20px) saturate(160%);
       border-bottom:1px solid var(--border);
       box-shadow:var(--shadow-xs);
@@ -61,7 +69,7 @@
     .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;}
     .brand-shield{
       width:38px;height:38px;
-      background:linear-gradient(145deg,var(--amber),var(--orange));
+      background:linear-gradient(145deg,var(--blue),var(--red));
       border-radius:10px;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 4px 14px rgba(245,158,11,.38);flex-shrink:0;
@@ -100,20 +108,34 @@
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
 
     /* ── BODY LAYOUT ── */
-    .body{display:flex;flex:1;min-height:0;height:calc(100vh - 64px);overflow:hidden;}
+    .body{display:flex;flex:1;min-height:0;height:calc(100vh - 84px);overflow:hidden;}
+    .header,.sidebar,.main-inner{animation:uiFade .45s ease both;}
+    .sidebar{animation-delay:.08s;}
+    .main-inner{animation-delay:.14s;}
+    @keyframes uiFade{
+      from{opacity:0;transform:translateY(10px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .header,.sidebar,.main-inner,.rcard,.filter-item,.user-greet{animation:none!important;transition:none!important;}
+    }
 
     /* ── SIDEBAR ── */
     .sidebar{
       width:312px;flex-shrink:0;
-      background:var(--surface);
+      background:#DCEBFF;
       border-right:1px solid var(--border);
       display:flex;flex-direction:column;
-      position:sticky;top:64px;align-self:flex-start;
-      height:calc(100vh - 64px);
-      min-height:calc(100vh - 64px);
+      position:sticky;top:84px;align-self:flex-start;
+      height:calc(100vh - 84px);
+      min-height:calc(100vh - 84px);
       overflow:hidden;
     }
-    .sidebar-top{padding:1.25rem 1.1rem .9rem;border-bottom:1px solid var(--border);}
+    .sidebar-top{
+      padding:1.25rem 1.1rem .9rem;
+      border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg,rgba(250,204,21,.24),rgba(255,255,255,0));
+    }
     .sidebar-heading{font-weight:800;font-size:.88rem;color:var(--text);margin-bottom:2px;}
     .sidebar-sub{font-size:.72rem;color:var(--muted);}
 
@@ -122,29 +144,38 @@
     .filter-item{
       display:flex;align-items:center;gap:10px;
       padding:.72rem .9rem;border-radius:var(--r-md);
-      border:1.5px solid transparent;
-      cursor:pointer;transition:all .18s;
+      border:1.5px solid var(--border);
+      cursor:pointer;transition:all .2s ease;
+      background:rgba(255,255,255,.55);
     }
-    .filter-item:hover{background:var(--surface2);border-color:var(--border);}
-    .filter-item.active{background:var(--amber-light);border-color:var(--amber-border);}
+    .filter-item:hover{
+      background:var(--surface2);
+      border-color:var(--amber-border);
+      transform:translateX(2px);
+    }
+    .filter-item.active{
+      background:linear-gradient(135deg,rgba(250,204,21,.34),rgba(255,255,255,.62));
+      border-color:#FDE047;
+      box-shadow:0 6px 14px rgba(15,23,42,.10);
+    }
 
     .fi-icon{
       width:34px;height:34px;border-radius:9px;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
     }
     .fi-icon svg{width:17px;height:17px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-    .fi-all    .fi-icon{background:#F5F0E8;} .fi-all    .fi-icon svg{stroke:var(--muted);}
+    .fi-all    .fi-icon{background:#F1F5F9;} .fi-all    .fi-icon svg{stroke:var(--muted);}
     .fi-new    .fi-icon{background:var(--red-light);}    .fi-new    .fi-icon svg{stroke:var(--red);}
     .fi-sos    .fi-icon{background:var(--red-light);}    .fi-sos    .fi-icon svg{stroke:var(--red);}
     .fi-report .fi-icon{background:var(--blue-light);}   .fi-report .fi-icon svg{stroke:var(--blue);}
     .fi-verify .fi-icon{background:var(--amber-light);}  .fi-verify .fi-icon svg{stroke:var(--amber-dark);}
     .fi-disp   .fi-icon{background:var(--orange-light);} .fi-disp   .fi-icon svg{stroke:var(--orange);}
     .fi-res    .fi-icon{background:var(--green-light);}  .fi-res    .fi-icon svg{stroke:var(--green);}
-    .fi-false  .fi-icon{background:#F5F0E8;}             .fi-false  .fi-icon svg{stroke:var(--muted);}
+    .fi-false  .fi-icon{background:#F1F5F9;}             .fi-false  .fi-icon svg{stroke:var(--muted);}
     .fi-all.active    .fi-icon{background:var(--amber-light);} .fi-all.active    .fi-icon svg{stroke:var(--amber-dark);}
 
     .fi-label{font-weight:600;font-size:.84rem;color:var(--text2);flex:1;}
-    .filter-item.active .fi-label{color:var(--amber-deep);font-weight:700;}
+    .filter-item.active .fi-label{color:var(--amber-deep);font-weight:800;}
 
     .fi-count{
       font-family:'JetBrains Mono',monospace;font-weight:700;font-size:.92rem;min-width:22px;text-align:right;
@@ -160,13 +191,21 @@
 
     .sidebar-footer{padding:1rem 1.1rem;border-top:1px solid var(--border);margin-top:auto;}
     .sidebar-footer p{font-size:.7rem;color:var(--muted2);line-height:1.55;}
-    .sidebar-footer strong{color:var(--muted);}
+    .sidebar-footer strong{color:var(--text2);}
 
     /* ── MAIN ── */
-    .main{flex:1;min-width:0;height:calc(100vh - 64px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
+    .main{flex:1;min-width:0;height:calc(100vh - 84px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;}
     .main-inner{padding:1.5rem 1.75rem 3rem;display:flex;flex-direction:column;gap:1.25rem;flex:1;}
 
-    .main-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+    .main-header{
+      display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+      background:rgba(236,245,255,.82);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:1rem 1.1rem;
+      box-shadow:var(--shadow-sm);
+      backdrop-filter:blur(8px);
+    }
     .main-title{font-weight:900;font-size:1.55rem;letter-spacing:-.75px;line-height:1.1;}
     .main-sub{font-size:.78rem;color:var(--muted);margin-top:3px;}
     .main-quick-filters{display:flex;gap:.5rem;margin-top:.65rem;flex-wrap:wrap;}
@@ -191,6 +230,11 @@
       border:1px solid #1F2937;border-radius:14px;
       color:#A7F3D0;white-space:nowrap;
       box-shadow:inset 0 0 0 1px rgba(148,163,184,.08),0 10px 24px rgba(2,6,23,.28);
+      transition:transform .2s ease, box-shadow .2s ease;
+    }
+    .main-datetime:hover{
+      transform:translateY(-1px);
+      box-shadow:inset 0 0 0 1px rgba(148,163,184,.14),0 14px 28px rgba(2,6,23,.33);
     }
     .main-datetime svg{width:24px;height:18px;stroke:#60A5FA;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
     .time-block{display:flex;flex-direction:column;line-height:1.05;}
@@ -205,7 +249,10 @@
       margin-top:4px;
     }
     .user-greet{
-      background:var(--surface);
+      display:inline-flex;
+      align-items:center;
+      gap:.45rem;
+      background:linear-gradient(145deg,#F8FBFF,#EEF5FF);
       border:1px solid var(--border-mid);
       border-radius:999px;
       padding:.42rem .9rem;
@@ -214,15 +261,59 @@
       color:var(--text2);
       white-space:nowrap;
       box-shadow:var(--shadow-xs);
+      text-decoration:none;
+      transition:transform .2s ease, color .2s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      will-change:transform;
     }
+    .user-greet-icon{
+      width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+      border-radius:50%;
+      background:var(--blue-light);
+      border:1px solid var(--blue-border);
+      color:var(--blue);
+      flex-shrink:0;
+      transition:all .2s ease;
+    }
+    .user-greet-icon svg{
+      width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;
+      stroke-linecap:round;stroke-linejoin:round;
+    }
+    .user-greet:hover{
+      color:#fff;
+      background:linear-gradient(135deg,var(--blue),var(--red));
+      border-color:transparent;
+      box-shadow:0 8px 18px rgba(29,78,216,.28);
+      transform:translateY(-1px) scale(1.02);
+      animation:greetFloat .85s ease-in-out;
+    }
+    .user-greet:focus-visible{
+      outline:none;
+      box-shadow:0 0 0 3px rgba(29,78,216,.22), 0 8px 18px rgba(29,78,216,.22);
+    }
+    .user-greet:active{transform:translateY(0) scale(.99);}
     .user-greet span{
       color:var(--amber-deep);
       font-weight:800;
+    }
+    .user-greet:hover .user-greet-icon{
+      background:rgba(255,255,255,.2);
+      border-color:rgba(255,255,255,.45);
+      color:#fff;
+    }
+    .user-greet:hover span{color:#FDE047;}
+    @keyframes greetFloat{
+      0%{transform:translateY(0) scale(1);}
+      50%{transform:translateY(-2px) scale(1.03);}
+      100%{transform:translateY(-1px) scale(1.02);}
     }
     .filter-label-bar{
       font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;
       letter-spacing:2px;text-transform:uppercase;color:var(--muted);
       display:flex;align-items:center;gap:10px;
+      position:sticky;top:0;z-index:8;
+      background:linear-gradient(180deg, rgba(248,250,252,.98), rgba(248,250,252,.92));
+      padding:.35rem 0;
+      backdrop-filter:blur(4px);
     }
     .filter-label-bar::after{content:'';flex:1;height:1px;background:var(--border);}
 
@@ -239,6 +330,14 @@
       position:relative;overflow:hidden;
     }
     .rcard:hover{box-shadow:var(--shadow-md);border-color:var(--border-mid);transform:translateY(-1px);}
+    .rcard::after{
+      content:'';
+      position:absolute;left:0;right:0;top:0;height:3px;
+      background:linear-gradient(90deg,rgba(29,78,216,.9),rgba(250,204,21,.95),rgba(220,38,38,.9));
+      opacity:0;
+      transition:opacity .25s ease;
+    }
+    .rcard:hover::after{opacity:1;}
 
     /* left severity bar */
     .rcard::before{
@@ -380,7 +479,8 @@
     .empty{
       display:flex;flex-direction:column;align-items:center;justify-content:center;
       padding:4.5rem 2rem;text-align:center;
-      background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r-xl);
+      background:linear-gradient(180deg,#F3F8FF,#EAF2FF);
+      border:1.5px solid var(--border);border-radius:var(--r-xl);
     }
     .empty-icon{
       width:58px;height:58px;border-radius:14px;
@@ -462,11 +562,70 @@
     .edit-btn.save{background:linear-gradient(135deg,var(--amber),var(--amber-dark));border-color:transparent;color:#fff;}
     .edit-btn.save:hover{box-shadow:0 4px 14px rgba(245,158,11,.3);}
 
+    /* dispatcher profile modal */
+    .profile-backdrop{
+      position:fixed;inset:0;z-index:960;
+      background:rgba(15,23,42,.35);
+      backdrop-filter:blur(3px);
+      display:none;align-items:center;justify-content:center;
+      padding:1rem;
+    }
+    .profile-backdrop.show{display:flex;animation:fadeIn .2s ease;}
+    .profile-modal{
+      width:min(620px,100%);
+      background:linear-gradient(180deg,#F6FAFF,#FFFFFF);
+      border:1.5px solid var(--border);
+      border-radius:16px;
+      box-shadow:var(--shadow-xl);
+      overflow:hidden;
+    }
+    .profile-head{
+      display:flex;align-items:center;justify-content:space-between;gap:.75rem;
+      padding:1rem 1.1rem;
+      border-bottom:1px solid var(--border);
+      background:var(--surface2);
+    }
+    .profile-title{font-size:.98rem;font-weight:800;color:var(--text);}
+    .profile-sub{font-size:.74rem;color:var(--muted);margin-top:2px;}
+    .profile-close{
+      border:1px solid var(--border-mid);background:var(--surface);color:var(--text2);
+      border-radius:8px;padding:.32rem .58rem;cursor:pointer;font-weight:700;
+    }
+    .profile-close:hover{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-dark);}
+    .profile-form{padding:1rem 1.1rem 1.1rem;display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+    .profile-field{display:flex;flex-direction:column;gap:.35rem;}
+    .profile-field.full{grid-column:1 / -1;}
+    .profile-field label{
+      font-size:.7rem;font-weight:700;color:var(--text2);
+      font-family:'JetBrains Mono',monospace;letter-spacing:.42px;text-transform:uppercase;
+    }
+    .profile-field input{
+      width:100%;padding:.66rem .75rem;border-radius:10px;
+      border:1.5px solid var(--border);background:var(--bg);color:var(--text);
+      font-family:'Outfit',sans-serif;font-size:.86rem;
+      transition:border-color .18s ease, box-shadow .18s ease;
+    }
+    .profile-field input:focus{
+      outline:none;border-color:var(--blue);background:var(--surface);
+      box-shadow:0 0 0 3px rgba(29,78,216,.12);
+    }
+    .profile-field input[disabled]{opacity:.75;cursor:not-allowed;}
+    .profile-actions{
+      grid-column:1 / -1;display:flex;justify-content:flex-end;gap:.55rem;margin-top:.15rem;
+    }
+    .profile-btn{
+      border:1.5px solid var(--border-mid);background:var(--surface);color:var(--text2);
+      border-radius:10px;padding:.5rem .9rem;cursor:pointer;font-weight:700;font-size:.8rem;
+    }
+    .profile-btn:hover{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-dark);}
+    .profile-btn.save{background:linear-gradient(135deg,var(--blue),var(--red));border-color:transparent;color:#fff;}
+    .profile-btn.save:hover{box-shadow:0 4px 14px rgba(29,78,216,.28);}
+
     @media(max-width:1024px){
-      .header{padding:0 .95rem;height:60px}
-      .body{height:calc(100vh - 60px);}
-      .sidebar{top:60px;height:calc(100vh - 60px);min-height:calc(100vh - 60px);}
-      .main{height:calc(100vh - 60px);}
+      .header{padding:0 .95rem;height:72px}
+      .body{height:calc(100vh - 72px);}
+      .sidebar{top:72px;height:calc(100vh - 72px);min-height:calc(100vh - 72px);}
+      .main{height:calc(100vh - 72px);}
       .main-inner{padding:1rem 1rem 2rem}
       .sidebar{width:220px}
       .rcard{padding:1.1rem 1.05rem}
@@ -480,6 +639,7 @@
       .filter-item{flex:1;min-width:124px;padding:.65rem .72rem}
       .main{overflow:visible;}
       .main-inner{padding:.85rem .75rem 1.5rem}
+      .main-header{padding:.85rem .9rem;}
       .main-title{font-size:1.3rem}
       .header-right{gap:.4rem;flex-wrap:wrap;justify-content:flex-end}
       .nav-btn{padding:.34rem .62rem;font-size:.72rem}
@@ -503,7 +663,17 @@
       .status-pill{font-size:.56rem}
       .edit-actions{flex-direction:column}
       .edit-btn{width:100%;text-align:center}
+      .profile-form{grid-template-columns:1fr;}
+      .profile-actions{flex-direction:column}
+      .profile-btn{width:100%;text-align:center}
       .toast{left:.5rem;right:.5rem;max-width:none;width:auto}
+      .user-greet{
+        width:100%;
+        justify-content:center;
+        padding:.5rem .9rem;
+      }
+      .user-greet-icon{width:20px;height:20px;}
+      .filter-label-bar{top:-1px;}
     }
   </style>
 </head>
@@ -517,15 +687,15 @@
       <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>
     </div>
     <div>
-      <div class="brand-name">FRANZ<em>OLU</em>TIONS</div>
-      <div class="brand-sub">Dispatcher Console</div>
+      <div class="brand-name">SVS</div>
+      <div class="brand-sub">Smart Verification System</div>
     </div>
   </a>
   <div class="header-right">
     <% if (currentUser && currentUser.role === 'admin') { %>
       <a class="nav-btn" href="/admin">Admin Panel</a>
     <% } %>
-    <form method="post" action="/dispatcher/logout" style="margin:0">
+    <form method="post" action="/dispatcher/logout" style="margin:0" id="dispatcherLogoutForm">
       <button class="nav-btn" type="submit">Logout</button>
     </form>
     <div class="header-weather" id="weatherText">
@@ -632,7 +802,12 @@
             <svg viewBox="0 0 24 24"><path d="M6.75 3v2.25m10.5-2.25v2.25M3.75 9.75h16.5M4.5 5.25h15A1.5 1.5 0 0 1 21 6.75v12A1.5 1.5 0 0 1 19.5 20.25h-15A1.5 1.5 0 0 1 3 18.75v-12A1.5 1.5 0 0 1 4.5 5.25Z"/></svg>
             Loading time...
           </div>
-          <div class="user-greet">HI!!! <span><%= (currentUser && (currentUser.fullName || currentUser.username)) ? (currentUser.fullName || currentUser.username) : 'Dispatcher' %></span></div>
+          <button type="button" class="user-greet" title="Open profile settings" onclick="openProfileModal()">
+            <span class="user-greet-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0m-3.75 13.5a7.5 7.5 0 0 1 15 0"/></svg>
+            </span>
+            HI!!! <span id="profileGreetingName"><%= (currentUser && (currentUser.fullName || currentUser.username)) ? (currentUser.fullName || currentUser.username) : 'Dispatcher' %></span>
+          </button>
         </div>
       </div>
 
@@ -652,6 +827,45 @@
 <div class="toast" id="toast">
   <svg viewBox="0 0 24 24"><path d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
   <div><strong id="toastTitle"></strong><span id="toastMsg"></span></div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="profile-backdrop" id="profileBackdrop" onclick="if(event.target===this) closeProfileModal()">
+  <div class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <div class="profile-head">
+      <div>
+        <div class="profile-title" id="profileTitle">Dispatcher Profile</div>
+        <div class="profile-sub">Edit your profile without leaving the dashboard</div>
+      </div>
+      <button class="profile-close" type="button" onclick="closeProfileModal()">Close</button>
+    </div>
+    <form class="profile-form" id="profileForm">
+      <div class="profile-field full">
+        <label for="pUsername">Username</label>
+        <input id="pUsername" type="text" value="<%= (dispatcherProfile && dispatcherProfile.username) ? dispatcherProfile.username : '' %>" disabled>
+      </div>
+      <div class="profile-field">
+        <label for="pFullName">Full Name</label>
+        <input id="pFullName" name="fullName" type="text" value="<%= (dispatcherProfile && dispatcherProfile.fullName) ? dispatcherProfile.fullName : '' %>">
+      </div>
+      <div class="profile-field">
+        <label for="pPhone">Phone</label>
+        <input id="pPhone" name="phone" type="text" value="<%= (dispatcherProfile && dispatcherProfile.phone) ? dispatcherProfile.phone : '' %>">
+      </div>
+      <div class="profile-field">
+        <label for="pCurrentPassword">Current Password</label>
+        <input id="pCurrentPassword" name="currentPassword" type="password" placeholder="Required to change password">
+      </div>
+      <div class="profile-field">
+        <label for="pNewPassword">New Password</label>
+        <input id="pNewPassword" name="newPassword" type="password" placeholder="Optional, at least 6 characters">
+      </div>
+      <div class="profile-actions">
+        <button class="profile-btn" type="button" onclick="closeProfileModal()">Cancel</button>
+        <button class="profile-btn save" type="submit" id="profileSaveBtn">Save Profile</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- EDIT NAME/LOCATION MODAL -->
@@ -690,27 +904,57 @@
   </div>
 </div>
 <script id="initialReports" type="application/json"><%- JSON.stringify(reports) %></script>
+<script id="activeDispatchersSeed" type="application/json"><%- JSON.stringify(activeDispatchers || []) %></script>
+<script id="currentUserSeed" type="application/json"><%- JSON.stringify(currentUser || {}) %></script>
 <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+  try {
+    if (!sessionStorage.getItem('svs_dispatcher_window_ok')) {
+      window.location.replace('/dispatcher/login?force=1');
+    }
+  } catch (_e) {
+    window.location.replace('/dispatcher/login?force=1');
+  }
+
   window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
-      window.location.replace('/dispatcher/login');
+      window.location.replace('/dispatcher/login?force=1');
     }
   });
 
   const realtimeCfg = <%- JSON.stringify(realtime || {}) %>;
+  const logoutForm = document.getElementById('dispatcherLogoutForm');
+  if (logoutForm) {
+    logoutForm.addEventListener('submit', () => {
+      try { sessionStorage.removeItem('svs_dispatcher_window_ok'); } catch (_e) {}
+    });
+  }
   const pusher = (realtimeCfg.key && realtimeCfg.cluster)
     ? new Pusher(realtimeCfg.key, { cluster: realtimeCfg.cluster, forceTLS: true })
     : null;
   const channel = pusher ? pusher.subscribe(realtimeCfg.channel || 'mdrrmo-reports') : null;
   let reports = [];
+  let activeDispatchers = [];
+  let currentUser = {};
   try {
     const seed = JSON.parse(document.getElementById('initialReports').textContent || '[]');
     reports = (Array.isArray(seed) ? seed : []).map(normalizeReport);
   } catch (_e) {
     reports = [];
   }
+  try {
+    const users = JSON.parse(document.getElementById('activeDispatchersSeed').textContent || '[]');
+    activeDispatchers = Array.isArray(users) ? users : [];
+  } catch (_e) {
+    activeDispatchers = [];
+  }
+  try {
+    currentUser = JSON.parse(document.getElementById('currentUserSeed').textContent || '{}') || {};
+  } catch (_e) {
+    currentUser = {};
+  }
+  const currentUserId = String((currentUser && currentUser.userId) || '').trim();
   let curFilter = 'all';
   let editReportId = '';
   const geoCache = new Map();
@@ -830,19 +1074,34 @@
   function trustMeter(falseCount) {
     if (falseCount <= 0) return { label: 'Trustworthy', className: 'trust-trustworthy' };
     if (falseCount <= 5) return { label: 'Neutral', className: 'trust-neutral' };
-    if (falseCount <= 10) return { label: 'Need Verification', className: 'trust-verify' };
+    if (falseCount <= 10) return { label: 'Need Verification of the credentials', className: 'trust-verify' };
     return { label: 'No Trust Credentials', className: 'trust-no' };
   }
 
+  function canSeeReport(r) {
+    if (!r) return false;
+    const owner = String(r.assignedToId || '').trim();
+    if (!owner) return true;
+    return owner === currentUserId;
+  }
+
+  function assignmentLabel(r) {
+    const owner = String(r.assignedToName || '').trim();
+    if (!owner) return 'Unassigned';
+    if (String(r.assignedToId || '').trim() === currentUserId) return `Assigned to you`;
+    return `Assigned: ${owner}`;
+  }
+
   function counts() {
-    document.getElementById('cAll').textContent   = reports.length;
-    document.getElementById('cNew').textContent    = reports.filter(r=>r.status==='new').length;
-    document.getElementById('cSos').textContent    = reports.filter(isSosReport).length;
-    document.getElementById('cReport').textContent = reports.filter(isRegularReport).length;
-    document.getElementById('cVerify').textContent = reports.filter(r=>r.status==='verifying').length;
-    document.getElementById('cDisp').textContent   = reports.filter(r=>r.status==='dispatched').length;
-    document.getElementById('cRes').textContent    = reports.filter(r=>r.status==='resolved').length;
-    document.getElementById('cFalse').textContent  = reports.filter(r=>r.status==='false-report').length;
+    const visible = reports.filter(canSeeReport);
+    document.getElementById('cAll').textContent   = visible.length;
+    document.getElementById('cNew').textContent    = visible.filter(r=>r.status==='new').length;
+    document.getElementById('cSos').textContent    = visible.filter(isSosReport).length;
+    document.getElementById('cReport').textContent = visible.filter(isRegularReport).length;
+    document.getElementById('cVerify').textContent = visible.filter(r=>r.status==='verifying').length;
+    document.getElementById('cDisp').textContent   = visible.filter(r=>r.status==='dispatched').length;
+    document.getElementById('cRes').textContent    = visible.filter(r=>r.status==='resolved').length;
+    document.getElementById('cFalse').textContent  = visible.filter(r=>r.status==='false-report').length;
   }
 
   function setFilter(f, el) {
@@ -864,8 +1123,27 @@
     render();
   }
 
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function confirmFalseReportById(id) {
+    const report = reports.find(x => x.id === id);
+    confirmFalseReport(id, report ? report.emergencyType : '');
+  }
+
+  function callReporterById(id) {
+    const report = reports.find(x => x.id === id);
+    toast_('Calling...', `Initiating call to ${report && report.contact ? report.contact : 'unknown number'}`);
+  }
+
   function cardHTML(r) {
-    const rid = r.id || r.reportId || r._id || '';
+    const rid = String(r.id || r.reportId || r._id || '').replace(/[^a-zA-Z0-9:_-]/g, '');
     const reportRef = displayReportRef(r);
     const tc  = typeClass[r.emergencyType] || 'ti-other';
     const ico = typeIcons[r.emergencyType] || typeIcons.Other;
@@ -875,13 +1153,15 @@
     const exactLocation = getReadableLocation(r);
     const prankCount = getFalseCountByContact(r.contact);
     const meter = trustMeter(prankCount);
+    const isUnassigned = !String(r.assignedToId || '').trim();
+    const isMine = String(r.assignedToId || '').trim() === currentUserId;
     return `
     <div class="rcard sev-${r.severity}" id="card-${rid}">
       <div class="rcard-top">
         <div class="rcard-left">
           <div class="rcard-type">
             <div class="type-icon ${tc}">${ico}</div>
-            <span class="type-name">${r.emergencyType}</span>
+            <span class="type-name">${esc(r.emergencyType)}</span>
             <span class="cred-pill cred-${r.credibility}">${r.credibility === 'high' ? 'High Cred' : r.credibility === 'medium' ? 'Med Cred' : 'Low Cred'}</span>
             <span class="trust-pill ${meter.className}">${meter.label} (${prankCount})</span>
             ${prankCount > 0 ? `<span class="prank-warning">Warning: This number has committed ${prankCount} prank call/report${prankCount > 1 ? 's' : ''}.</span>` : ''}
@@ -889,55 +1169,67 @@
           <div class="rcard-meta">
             <span>
               <svg viewBox="0 0 24 24"><path d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5-3.9 19.5m-2.1-19.5-3.9 19.5"/></svg>
-              ${reportRef}
+              ${esc(reportRef)}
             </span>
             <span>
               <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
-              ${r.name}
+              ${esc(r.name)}
             </span>
             <span>
               <svg viewBox="0 0 24 24"><path d="M2.25 6.338c0 7.5 6.089 13.587 13.589 13.587l.682-.002a1.124 1.124 0 0 0 1.12-1.065l.254-3.223a1.125 1.125 0 0 0-.89-1.207l-2.98-.67a1.125 1.125 0 0 0-1.264.597l-.75 1.5a11.775 11.775 0 0 1-4.955-4.955l1.5-.75a1.125 1.125 0 0 0 .597-1.264l-.67-2.98a1.125 1.125 0 0 0-1.207-.89l-3.223.254a1.124 1.124 0 0 0-1.065 1.12L2.25 6.338Z"/></svg>
-              ${r.contact}
+              ${esc(r.contact)}
             </span>
             <span>
               <svg viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
               ${ago(r.timestamp)}
             </span>
+            <span>
+              <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M3.75 12a8.25 8.25 0 1 1 16.5 0 8.25 8.25 0 0 1-16.5 0Z"/></svg>
+              ${esc(assignmentLabel(r))}
+            </span>
           </div>
         </div>
         <div class="rcard-right">
           ${r.photo ? `<img src="${r.photo}" class="photo-thumb" alt="Photo">` : ''}
-          <span class="status-pill sp-${r.status}">${r.status.replace('-',' ')}</span>
+          <span class="status-pill sp-${esc(r.status)}">${esc(r.status).replace('-',' ')}</span>
         </div>
       </div>
       <div class="rcard-loc">
         ${isPanic ? `
           <span>
             <svg viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-            ${exactLocation || (parseGps(r.gps) ? 'Resolving exact location...' : 'Location unavailable')}
+            ${esc(exactLocation || (parseGps(r.gps) ? 'Resolving exact location...' : 'Location unavailable'))}
           </span>
         ` : `
           <span>
             <svg viewBox="0 0 24 24"><path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
-            ${r.barangay}
+            ${esc(r.barangay)}
           </span>
           <span>
             <svg viewBox="0 0 24 24"><path d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z"/></svg>
-            ${r.landmark}
+            ${esc(r.landmark)}
           </span>
           ${r.gps ? `<span>
             <svg viewBox="0 0 24 24"><path d="M9.348 14.651a3.75 3.75 0 0 1 0-5.303m5.304-.001a3.75 3.75 0 0 1 0 5.304m-7.425 2.122a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
-            ${gpsDisplayLabel(r)}
+            ${esc(gpsDisplayLabel(r))}
           </span>` : ''}
         `}
         <span>
           <svg viewBox="0 0 24 24"><path d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
-          ${r.severity}
+          ${esc(r.severity)}
         </span>
       </div>
       ${gpsMap}
-      <div class="rcard-desc">${r.description}</div>
+      <div class="rcard-desc">${esc(r.description)}</div>
       <div class="rcard-actions">
+        ${isUnassigned ? `<button class="act-btn primary" onclick="claimReport('${rid}')">
+          <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M3.75 12a8.25 8.25 0 1 1 16.5 0 8.25 8.25 0 0 1-16.5 0Z"/></svg>
+          Claim
+        </button>` : ''}
+        ${isMine ? `<button class="act-btn" onclick="passReportPrompt('${rid}')">
+          <svg viewBox="0 0 24 24"><path d="M7.5 8.25h9m-9 3h6m-6 3h3M3 5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25v13.5A2.25 2.25 0 0 1 18.75 21H5.25A2.25 2.25 0 0 1 3 18.75V5.25Z"/></svg>
+          Pass
+        </button>` : ''}
         <button class="act-btn" onclick="editDetails('${rid}')">
           <svg viewBox="0 0 24 24"><path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.862 4.487ZM19.5 7.125 16.875 4.5"/></svg>
           Edit Name/Location
@@ -954,13 +1246,13 @@
           <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           Resolved
         </button>` : ''}
-        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="confirmFalseReport('${rid}','${r.emergencyType}')">
+        ${(r.status!=='resolved'&&r.status!=='false-report') ? `<button class="act-btn danger-act" onclick="confirmFalseReportById('${rid}')">
           <svg viewBox="0 0 24 24"><path d="M9.75 9.75l4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
           False Report
         </button>` : ''}
-        <button class="act-btn" onclick="toast_('Calling…','Initiating call to ${r.contact}')">
+        <button class="act-btn" onclick="callReporterById('${rid}')">
           <svg viewBox="0 0 24 24"><path d="M2.25 6.338c0 7.5 6.089 13.587 13.589 13.587l.682-.002a1.124 1.124 0 0 0 1.12-1.065l.254-3.223a1.125 1.125 0 0 0-.89-1.207l-2.98-.67a1.125 1.125 0 0 0-1.264.597l-.75 1.5a11.775 11.775 0 0 1-4.955-4.955l1.5-.75a1.125 1.125 0 0 0 .597-1.264l-.67-2.98a1.125 1.125 0 0 0-1.207-.89l-3.223.254a1.124 1.124 0 0 0-1.065 1.12L2.25 6.338Z"/></svg>
-          Call ${r.contact}
+          Call ${esc(r.contact)}
         </button>
       </div>
     </div>`;
@@ -1063,6 +1355,9 @@
     return {
       ...r,
       id: r.id || r.reportId || r._id || '',
+      assignedToId: String(r.assignedToId || '').trim(),
+      assignedToName: String(r.assignedToName || '').trim(),
+      assignedAt: r.assignedAt || null,
       gpsResolvedText: r.gpsResolvedText || '',
       _gpsLookupPending: false,
       _gpsLookupDone: false
@@ -1071,7 +1366,7 @@
 
   function reportsSignature(arr) {
     return (arr || [])
-      .map(r => `${r.id || r.reportId || ''}|${r.status || ''}|${r.timestamp || ''}`)
+      .map(r => `${r.id || r.reportId || ''}|${r.status || ''}|${r.assignedToId || ''}|${r.timestamp || ''}`)
       .join('||');
   }
 
@@ -1080,6 +1375,11 @@
   async function syncReportsFromServer(forceRender = false) {
     try {
       const res = await fetch(`/api/reports?_=${Date.now()}`, { cache: 'no-store' });
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        handleUnauthorized(data);
+        return;
+      }
       if (!res.ok) return;
       const data = await res.json();
       const fresh = (Array.isArray(data) ? data : []).map(normalizeReport);
@@ -1101,13 +1401,14 @@
       existingMaps.set(card.id, mapNode);
     });
 
+    const visibleReports = reports.filter(canSeeReport);
     const filtered = curFilter === 'all'
-      ? reports
+      ? visibleReports
       : curFilter === 'sos'
-        ? reports.filter(isSosReport)
+        ? visibleReports.filter(isSosReport)
         : curFilter === 'report'
-          ? reports.filter(isRegularReport)
-          : reports.filter(r=>r.status===curFilter);
+          ? visibleReports.filter(isRegularReport)
+          : visibleReports.filter(r=>r.status===curFilter);
     if (!filtered.length) {
       list.innerHTML = `<div class="empty">
         <div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg></div>
@@ -1175,7 +1476,107 @@
   function handleUnauthorized(data) {
     const msg = (data && data.error) ? String(data.error) : 'Session expired. Please log in again.';
     toast_('Unauthorized', msg, 'warn');
-    setTimeout(() => window.location.assign('/dispatcher/login'), 650);
+    setTimeout(() => window.location.assign('/dispatcher/login?force=1'), 650);
+  }
+
+  async function syncActiveDispatchers() {
+    try {
+      const res = await fetch(`/api/dispatchers/active?_=${Date.now()}`, { cache: 'no-store' });
+      if (res.status === 401) {
+        const data = await res.json().catch(() => ({}));
+        handleUnauthorized(data);
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json().catch(() => []);
+      activeDispatchers = Array.isArray(data) ? data : [];
+    } catch (_e) {}
+  }
+
+  async function claimReport(id) {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/report/${encodeURIComponent(id)}/claim`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) return handleUnauthorized(data);
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not claim report');
+      const incoming = normalizeReport(data.report || {});
+      const idx = reports.findIndex(x => x.id === incoming.id);
+      if (idx >= 0) reports[idx] = incoming;
+      else reports.unshift(incoming);
+      lastReportsSig = reportsSignature(reports);
+      render();
+      toast_('Report claimed', `${incoming.id || id} is now assigned to you.`);
+    } catch (e) {
+      toast_('Error', e && e.message ? e.message : 'Could not claim report.', 'warn');
+    }
+  }
+
+  async function passReport(id, targetDispatcherId) {
+    const res = await fetch(`/api/report/${encodeURIComponent(id)}/pass`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetDispatcherId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      handleUnauthorized(data);
+      return false;
+    }
+    if (!res.ok || !data.success) throw new Error(data.error || 'Could not pass report');
+
+    const incoming = normalizeReport(data.report || {});
+    const idx = reports.findIndex(x => x.id === incoming.id);
+    if (canSeeReport(incoming)) {
+      if (idx >= 0) reports[idx] = incoming;
+      else reports.unshift(incoming);
+    } else if (idx >= 0) {
+      reports.splice(idx, 1);
+    }
+    lastReportsSig = reportsSignature(reports);
+    render();
+    toast_('Report passed', `${incoming.id || id} was passed to ${incoming.assignedToName || 'dispatcher'}.`);
+    return true;
+  }
+
+  async function passReportPrompt(id) {
+    const choices = (activeDispatchers || []).filter(u => !u.isSelf && String(u.id || '').trim());
+    if (!choices.length) {
+      toast_('No active dispatcher', 'No other active dispatcher is currently available.', 'warn');
+      return;
+    }
+    if (typeof Swal === 'undefined') {
+      toast_('Action unavailable', 'Passing reports requires dialog support. Refresh this page.', 'warn');
+      return;
+    }
+    const inputOptions = {};
+    choices.forEach(u => {
+      const name = String(u.fullName || u.username || 'Dispatcher').trim();
+      inputOptions[String(u.id)] = `${name} (${u.username || 'user'})`;
+    });
+    const result = await Swal.fire({
+      title: 'Pass Report',
+      text: `Select dispatcher for ${id}`,
+      input: 'select',
+      inputOptions,
+      inputPlaceholder: 'Select dispatcher',
+      showCancelButton: true,
+      confirmButtonText: 'Pass',
+      confirmButtonColor: '#1D4ED8',
+      cancelButtonColor: '#6B7280',
+      inputValidator: (value) => (!value ? 'Select a dispatcher.' : undefined),
+    });
+    if (!result.isConfirmed || !result.value) return;
+    try {
+      await passReport(id, result.value);
+    } catch (e) {
+      toast_('Error', e && e.message ? e.message : 'Could not pass report.', 'warn');
+    }
   }
 
   async function updStatus(id, status) {
@@ -1222,6 +1623,78 @@
   function closeEditModal() {
     editReportId = '';
     document.getElementById('editBackdrop').classList.remove('show');
+  }
+
+  function openProfileModal() {
+    document.getElementById('profileBackdrop').classList.add('show');
+    document.getElementById('pFullName').focus();
+  }
+
+  function closeProfileModal() {
+    const saveBtn = document.getElementById('profileSaveBtn');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Profile';
+    }
+    document.getElementById('profileBackdrop').classList.remove('show');
+    document.getElementById('pCurrentPassword').value = '';
+    document.getElementById('pNewPassword').value = '';
+  }
+
+  async function saveProfileFromModal() {
+    const saveBtn = document.getElementById('profileSaveBtn');
+    const payload = {
+      fullName: document.getElementById('pFullName').value.trim(),
+      phone: document.getElementById('pPhone').value.trim(),
+      currentPassword: document.getElementById('pCurrentPassword').value,
+      newPassword: document.getElementById('pNewPassword').value,
+    };
+    try {
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      const res = await fetch('/api/dispatcher/profile', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        handleUnauthorized(data);
+        return;
+      }
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not update profile.');
+
+      const profile = data.profile || {};
+      const displayName = (profile.fullName || profile.username || 'Dispatcher').trim();
+      const greet = document.getElementById('profileGreetingName');
+      if (greet) greet.textContent = displayName;
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Profile updated',
+          text: data.message || 'Profile saved successfully.',
+          confirmButtonColor: '#1D4ED8',
+        });
+      } else {
+        toast_('Profile updated', data.message || 'Profile saved successfully.');
+      }
+      closeProfileModal();
+    } catch (e) {
+      const msg = e && e.message ? e.message : 'Could not update profile.';
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Update failed',
+          text: msg,
+          confirmButtonColor: '#DC2626',
+        });
+      } else {
+        toast_('Error', msg, 'warn');
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Profile';
+    }
   }
 
   async function saveEditDetails() {
@@ -1271,29 +1744,35 @@
     e.preventDefault();
     saveEditDetails();
   });
+  document.getElementById('profileForm').addEventListener('submit', e => {
+    e.preventDefault();
+    saveProfileFromModal();
+  });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeEditModal();
+    if (e.key !== 'Escape') return;
+    closeEditModal();
+    closeProfileModal();
   });
 
   function confirmFalseReport(id, emergencyType) {
     const label = emergencyType === 'PANIC SOS' ? 'SOS report' : 'report';
-    if (typeof Swal !== 'undefined') {
-      Swal.fire({
-        title: 'Mark as False Report?',
-        text: `You are about to flag this ${label} as false.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, flag as false',
-        cancelButtonText: 'Cancel',
-        confirmButtonColor: '#DC2626',
-        cancelButtonColor: '#6B7280',
-      }).then((result) => {
-        if (result.isConfirmed) updStatus(id, 'false-report');
-      });
+    if (typeof Swal === 'undefined') {
+      toast_('Action unavailable', 'Confirmation dialog is not loaded. Please refresh this page.', 'warn');
       return;
     }
-    if (confirm(`Mark this ${label} as false report?`)) updStatus(id, 'false-report');
+    Swal.fire({
+      title: 'Mark as False Report?',
+      text: `You are about to flag this ${label} as false.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, flag as false',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#DC2626',
+      cancelButtonColor: '#6B7280',
+    }).then((result) => {
+      if (result.isConfirmed) updStatus(id, 'false-report');
+    });
   }
 
   function toast_(title, msg, type='ok') {
@@ -1309,6 +1788,7 @@
   // ── Realtime events ──
   if (channel) channel.bind('new-report', r => {
     const nr = normalizeReport(r);
+    if (!canSeeReport(nr)) return;
     reports.unshift(nr);
     lastReportsSig = reportsSignature(reports);
     render();
@@ -1319,24 +1799,56 @@
       if (el){el.classList.add('card-flash');setTimeout(()=>el.classList.remove('card-flash'),1800);}
     });
   });
-  if (channel) channel.bind('report-updated', ({id,status}) => {
-    const r=reports.find(x=>x.id===id);
-    if (r){r.status=status;lastReportsSig = reportsSignature(reports);render();}
+  if (channel) channel.bind('report-updated', updated => {
+    const id = updated && updated.id ? updated.id : '';
+    const r = reports.find(x=>x.id===id);
+    if (!r) return;
+    r.status = updated && updated.status ? updated.status : r.status;
+    if (Object.prototype.hasOwnProperty.call(updated || {}, 'assignedToId')) {
+      r.assignedToId = String(updated.assignedToId || '');
+      r.assignedToName = String((updated && updated.assignedToName) || '');
+      r.assignedAt = (updated && updated.assignedAt) || null;
+      if (!canSeeReport(r)) {
+        reports = reports.filter(x => x.id !== id);
+      }
+    }
+    lastReportsSig = reportsSignature(reports);
+    render();
   });
   if (channel) channel.bind('report-details-updated', updated => {
     const u = normalizeReport(updated);
     const idx = reports.findIndex(x => x.id === u.id);
-    if (idx >= 0) {
+    if (idx >= 0 && canSeeReport(u)) {
       reports[idx] = u;
       render();
+    } else if (idx >= 0 && !canSeeReport(u)) {
+      reports.splice(idx, 1);
+      render();
+    } else if (idx < 0 && canSeeReport(u)) {
+      reports.unshift(u);
+      render();
     }
+  });
+  if (channel) channel.bind('report-assignment-updated', updated => {
+    const u = normalizeReport(updated);
+    const idx = reports.findIndex(x => x.id === u.id);
+    if (canSeeReport(u)) {
+      if (idx >= 0) reports[idx] = u;
+      else reports.unshift(u);
+    } else if (idx >= 0) {
+      reports.splice(idx, 1);
+    }
+    lastReportsSig = reportsSignature(reports);
+    render();
   });
   if (channel) channel.bind('reports-cleared', ()=>{ reports=[]; lastReportsSig = reportsSignature(reports); render(); });
 
   // initial render
   render();
   void syncReportsFromServer(true);
+  void syncActiveDispatchers();
   setInterval(() => { void syncReportsFromServer(); }, 10000);
+  setInterval(() => { void syncActiveDispatchers(); }, 15000);
   updateDateTime();
   setInterval(updateDateTime, 1000);
   loadWeather();
