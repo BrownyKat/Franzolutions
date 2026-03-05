@@ -18,7 +18,13 @@ const Session     = require('./models/Session');
 const app    = express();
 const server = http.createServer(app);
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
-const COOKIE_NAME = 'auth_token';
+const ADMIN_REPORTS_PAGE_SIZE = 20;
+const ADMIN_AUDIT_PAGE_SIZE = 20;
+const COOKIE_NAME_LEGACY = 'auth_token';
+const ROLE_COOKIE_NAMES = {
+  admin: 'auth_token_admin',
+  dispatcher: 'auth_token_dispatcher',
+};
 const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
 const VALID_REPORT_STATUSES = new Set(['new', 'verifying', 'dispatched', 'resolved', 'false-report']);
 const VALID_EMERGENCY_TYPES = new Set(['Fire', 'Flood', 'Medical', 'Accident', 'Landslide', 'Other', 'PANIC SOS']);
@@ -97,40 +103,45 @@ app.use((req, res, next) => {
   next();
 });
 app.use(async (req, res, next) => {
-  const token = getCookie(req, COOKIE_NAME);
-  if (!token) return next();
-  const signed = verifySignedSessionToken(token);
-  if (signed) {
-    req.auth = {
-      role: signed.role,
-      userId: signed.userId,
-      username: signed.username,
-      fullName: signed.fullName,
-      expiresAt: signed.expiresAt,
-    };
-    req.authToken = token;
-    res.locals.auth = req.auth;
-    return next();
-  }
-  try {
-    const session = await Session.findOne({ token }).lean();
-    if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
-      await Session.deleteOne({ token });
-      clearSessionCookie(res);
-      return next();
-    }
+  const roleOrder = preferredRolesForPath(req.path);
+  const candidates = [];
 
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-    await Session.updateOne({ token }, { $set: { expiresAt } });
-    req.auth = {
-      role: session.role,
-      userId: session.userId,
-      username: session.username,
-      fullName: session.fullName,
-      expiresAt: expiresAt.getTime(),
-    };
-    req.authToken = token;
-    res.locals.auth = req.auth;
+  for (const role of roleOrder) {
+    const token = getCookie(req, cookieNameForRole(role));
+    if (token) candidates.push({ role, token, cookieName: cookieNameForRole(role) });
+  }
+
+  // Backward compatibility for older single-cookie sessions.
+  const legacyToken = getCookie(req, COOKIE_NAME_LEGACY);
+  if (legacyToken) candidates.push({ role: '', token: legacyToken, cookieName: COOKIE_NAME_LEGACY });
+
+  if (!candidates.length) return next();
+  try {
+    for (const candidate of candidates) {
+      const query = candidate.role
+        ? { token: candidate.token, role: candidate.role }
+        : { token: candidate.token };
+      const session = await Session.findOne(query).lean();
+      if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
+        await Session.deleteOne({ token: candidate.token });
+        clearSessionCookie(res, session && session.role ? session.role : null, candidate.cookieName);
+        continue;
+      }
+
+      const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+      await Session.updateOne({ token: candidate.token }, { $set: { expiresAt } });
+      req.auth = {
+        role: session.role,
+        userId: session.userId,
+        username: session.username,
+        fullName: session.fullName,
+        expiresAt: expiresAt.getTime(),
+      };
+      req.authToken = candidate.token;
+      req.authCookieName = cookieNameForRole(session.role);
+      res.locals.auth = req.auth;
+      break;
+    }
   } catch (err) {
     console.error('[auth] session lookup failed:', err && err.message ? err.message : err);
   }
@@ -293,20 +304,20 @@ app.post('/admin/login', async (req, res) => {
 });
 
 app.post('/logout', async (req, res) => {
-  await destroySession(req, res);
+  await destroyAllSessions(req, res);
   res.redirect('/login');
 });
 
 async function handleAdminLogout(req, res) {
-  await destroySession(req, res);
-  res.redirect('/login');
+  await destroySession(req, res, 'admin');
+  res.redirect('/admin/login');
 }
 app.post('/admin/logout', handleAdminLogout);
 app.get('/admin/logout', handleAdminLogout);
 app.all('/admin/logout', handleAdminLogout);
 
 async function handleDispatcherLogout(req, res) {
-  await destroySession(req, res);
+  await destroySession(req, res, 'dispatcher');
   res.redirect('/dispatcher/login');
 }
 app.post('/dispatcher/logout', handleDispatcherLogout);
@@ -314,7 +325,7 @@ app.get('/dispatcher/logout', handleDispatcherLogout);
 app.all('/dispatcher/logout', handleDispatcherLogout);
 
 app.get('/logout', async (req, res) => {
-  await destroySession(req, res);
+  await destroyAllSessions(req, res);
   res.redirect('/login');
 });
 
@@ -465,60 +476,42 @@ app.post('/api/dispatcher/profile', requireRolesApi(['dispatcher']), async (req,
 app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
-    const reportLimit = parsePerPage(req.query.reportLimit, 20);
-    const auditLimit = parsePerPage(req.query.auditLimit, 20);
-    const reportPage = parsePage(req.query.reportPage);
-    const auditPage = parsePage(req.query.auditPage);
-
+    const reportPage = parsePositiveInt(req.query.reportPage, 1);
+    const auditPage = parsePositiveInt(req.query.auditPage, 1);
     const dispatchers = await Dispatcher.find().sort({ createdAt: -1 }).lean();
-    const dispatcherById = new Map(dispatchers.map(d => [String(d._id), d]));
-    const reportsTotal = await Report.countDocuments(where);
-    const reportPagerMeta = buildPagerMeta(reportPage, reportLimit, reportsTotal);
+    const reportTotal = await Report.countDocuments(where);
+    const reportTotalPages = Math.max(1, Math.ceil(reportTotal / ADMIN_REPORTS_PAGE_SIZE));
+    const safeReportPage = Math.min(reportPage, reportTotalPages);
     const reports = await Report.find(where)
       .sort({ timestamp: -1 })
-      .skip(reportPagerMeta.skip)
-      .limit(reportPagerMeta.limit)
+      .skip((safeReportPage - 1) * ADMIN_REPORTS_PAGE_SIZE)
+      .limit(ADMIN_REPORTS_PAGE_SIZE)
       .lean({ virtuals: true });
-    const reportsWithDispatcher = reports.map(r => {
-      const assignedId = String((r && r.assignedToId) || '').trim();
-      const assigned = assignedId ? dispatcherById.get(assignedId) : null;
-      return {
-        ...r,
-        assignedDispatcher: String(r.assignedToUsername || (assigned && assigned.username) || '').trim(),
-      };
-    });
 
     const auditWhere = { actorRole: 'dispatcher' };
     const auditTotal = await AuditLog.countDocuments(auditWhere);
-    const auditPagerMeta = buildPagerMeta(auditPage, auditLimit, auditTotal);
+    const auditTotalPages = Math.max(1, Math.ceil(auditTotal / ADMIN_AUDIT_PAGE_SIZE));
+    const safeAuditPage = Math.min(auditPage, auditTotalPages);
     const auditLogs = await AuditLog.find(auditWhere)
       .sort({ timestamp: -1 })
-      .skip(auditPagerMeta.skip)
-      .limit(auditPagerMeta.limit)
+      .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
+      .limit(ADMIN_AUDIT_PAGE_SIZE)
       .lean();
-
-    const baseQuery = {
-      from,
-      to,
-      reportLimit,
-      auditLimit,
-    };
     res.render('admin', {
       dispatchers,
       reports: reportsWithDispatcher,
       auditLogs,
       stats: {
-        totalReports: reportsTotal,
+        totalReports: reportTotal,
         activeDispatchers: dispatchers.filter(d => d.isActive).length,
         totalDispatchers: dispatchers.length,
         auditCount: auditTotal,
       },
+      reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
+      auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
       from,
       to,
-      reportLimit,
-      auditLimit,
-      reportPager: buildPagerView(baseQuery, 'reports', 'reportPage', reportPagerMeta),
-      auditPager: buildPagerView(baseQuery, 'audit', 'auditPage', auditPagerMeta),
+      tab: pickAdminTab(req.query.tab),
       currentUser: req.auth,
       error: String(req.query.err || ''),
       success: String(req.query.ok || ''),
@@ -548,7 +541,7 @@ app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), asyn
       passwordHash: hashPassword(password),
       isActive: true,
     });
-    return res.redirect('/admin?ok=Dispatcher%20created');
+    return res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher created' }));
   } catch (err) {
     console.error(err);
     const msg = err && err.code === 11000 ? 'Username already exists.' : 'Could not create dispatcher.';
@@ -559,7 +552,7 @@ app.post('/admin/dispatchers', requireRolesPage(['admin'], '/admin/login'), asyn
 app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     const dispatcher = await Dispatcher.findById(req.params.id);
-    if (!dispatcher) return res.redirect('/admin?err=Dispatcher%20not%20found');
+    if (!dispatcher) return res.redirect(adminRedirectUrl(req, { err: 'Dispatcher not found' }));
 
     dispatcher.username = String(req.body.username || '').trim();
     dispatcher.fullName = String(req.body.fullName || '').trim();
@@ -567,25 +560,25 @@ app.post('/admin/dispatchers/:id/update', requireRolesPage(['admin'], '/admin/lo
     dispatcher.isActive = req.body.isActive === 'on';
     const newPassword = String(req.body.newPassword || '');
     if (newPassword) {
-      if (newPassword.length < 6) return res.redirect('/admin?err=Password%20must%20be%20at%20least%206%20characters');
+      if (newPassword.length < 6) return res.redirect(adminRedirectUrl(req, { err: 'Password must be at least 6 characters' }));
       dispatcher.passwordHash = hashPassword(newPassword);
     }
     await dispatcher.save();
-    res.redirect('/admin?ok=Dispatcher%20updated');
+    res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher updated' }));
   } catch (err) {
     console.error(err);
     const msg = err && err.code === 11000 ? 'Username already exists.' : 'Could not update dispatcher.';
-    res.redirect(`/admin?err=${encodeURIComponent(msg)}`);
+    res.redirect(adminRedirectUrl(req, { err: msg }));
   }
 });
 
 app.post('/admin/dispatchers/:id/delete', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     await Dispatcher.findByIdAndDelete(req.params.id);
-    res.redirect('/admin?ok=Dispatcher%20deleted');
+    res.redirect(adminRedirectUrl(req, { ok: 'Dispatcher deleted' }));
   } catch (err) {
     console.error(err);
-    res.redirect('/admin?err=Could%20not%20delete%20dispatcher');
+    res.redirect(adminRedirectUrl(req, { err: 'Could not delete dispatcher' }));
   }
 });
 
@@ -619,6 +612,7 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
         r.reportId || String(r._id || ''),
         r.emergencyType || '',
         r.status || '',
+        r.dispatcherName || '-',
         r.barangay || '',
         r.landmark || '',
         new Date(r.timestamp).toLocaleString(),
@@ -757,15 +751,14 @@ app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), as
       return res.status(400).json({ error: 'Invalid status value' });
     }
     const where = reportLookupQuery(req.params.id);
-    const current = await Report.findOne(where);
-    if (!current) return res.status(404).json({ error: 'Not found' });
-
-    const assignment = await resolveDispatcherAssignmentPatch(req, current);
-    if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
-
+    const updates = { status: req.body.status };
+    if (req.auth && req.auth.role === 'dispatcher') {
+      updates.dispatcherId = String(req.auth.userId || '');
+      updates.dispatcherName = String(req.auth.fullName || req.auth.username || '').trim();
+    }
     const report = await Report.findOneAndUpdate(
       where,
-      { status: nextStatus, ...assignment.patch },
+      updates,
       { new: true }
     );
     await logAudit({
@@ -1180,44 +1173,34 @@ function getCookie(req, name) {
 }
 
 async function createSession(req, res, payload) {
-  const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
-  if (currentToken && !verifySignedSessionToken(currentToken)) {
-    await Session.deleteOne({ token: currentToken });
-  }
+  const role = payload.role;
+  const cookieName = cookieNameForRole(role);
+  const currentToken = req.authToken || getCookie(req, cookieName);
+  if (currentToken) await Session.deleteOne({ token: currentToken });
   const token = crypto.randomBytes(24).toString('hex');
-  let outToken = token;
-  const expiresAt = Date.now() + SESSION_TTL_MS;
-  try {
-    await Session.create({
-      token,
-      role: payload.role,
-      userId: payload.userId,
-      username: payload.username,
-      fullName: payload.fullName,
-      expiresAt: new Date(expiresAt),
-    });
-  } catch (err) {
-    console.error('[auth] Session.create failed, using signed fallback:', err && err.message ? err.message : err);
-    outToken = createSignedSessionToken({
-      role: payload.role,
-      userId: payload.userId,
-      username: payload.username,
-      fullName: payload.fullName,
-      expiresAt,
-    });
-    if (!outToken) throw err;
-  }
-  const isHttps = req.secure || String(req.get('x-forwarded-proto') || '').toLowerCase() === 'https';
-  res.cookie(COOKIE_NAME, outToken, {
+  await Session.create({
+    token,
+    role: payload.role,
+    userId: payload.userId,
+    username: payload.username,
+    fullName: payload.fullName,
+    expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+  });
+  res.cookie(cookieName, token, {
+    maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: 'lax',
     secure: isHttps || process.env.NODE_ENV === 'production',
     path: '/',
   });
+
+  // Clean up legacy cookie after successful role-based login.
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
 }
 
-function clearSessionCookie(res) {
-  res.clearCookie(COOKIE_NAME, {
+function clearSessionCookie(res, role = null, explicitCookieName = '') {
+  const cookieName = explicitCookieName || (role ? cookieNameForRole(role) : COOKIE_NAME_LEGACY);
+  res.clearCookie(cookieName, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -1225,10 +1208,41 @@ function clearSessionCookie(res) {
   });
 }
 
-async function destroySession(req, res) {
-  const token = req.authToken || getCookie(req, COOKIE_NAME);
-  if (token && !verifySignedSessionToken(token)) await Session.deleteOne({ token });
-  clearSessionCookie(res);
+async function destroySession(req, res, role = '') {
+  const effectiveRole = role || (req.auth && req.auth.role) || '';
+  const cookieName = effectiveRole ? cookieNameForRole(effectiveRole) : (req.authCookieName || COOKIE_NAME_LEGACY);
+  const token = role ? getCookie(req, cookieName) : (req.authToken || getCookie(req, cookieName));
+  if (token) await Session.deleteOne({ token });
+  if (effectiveRole) {
+    clearSessionCookie(res, effectiveRole);
+  } else {
+    clearSessionCookie(res, null, cookieName);
+    clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+  }
+}
+
+async function destroyAllSessions(req, res) {
+  for (const role of Object.keys(ROLE_COOKIE_NAMES)) {
+    const cookieName = cookieNameForRole(role);
+    const token = getCookie(req, cookieName);
+    if (token) await Session.deleteOne({ token });
+    clearSessionCookie(res, role);
+  }
+  const legacyToken = getCookie(req, COOKIE_NAME_LEGACY);
+  if (legacyToken) await Session.deleteOne({ token: legacyToken });
+  clearSessionCookie(res, null, COOKIE_NAME_LEGACY);
+}
+
+function cookieNameForRole(role) {
+  return ROLE_COOKIE_NAMES[role] || COOKIE_NAME_LEGACY;
+}
+
+function preferredRolesForPath(pathname) {
+  const p = String(pathname || '');
+  if (p === '/admin' || p.startsWith('/admin/')) return ['admin'];
+  if (p === '/dashboard' || p === '/dispatcher' || p.startsWith('/dispatcher/')) return ['dispatcher'];
+  if (p.startsWith('/api/')) return ['dispatcher', 'admin'];
+  return ['admin', 'dispatcher'];
 }
 
 function getSessionSecret() {
@@ -1568,64 +1582,83 @@ function sanitizePanicInput(body) {
 
 async function renderAdminPage(req, res, options = {}, statusCode = 200) {
   const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
-  const reportLimit = parsePerPage(req.query.reportLimit, 20);
-  const auditLimit = parsePerPage(req.query.auditLimit, 20);
-  const reportPage = parsePage(req.query.reportPage);
-  const auditPage = parsePage(req.query.auditPage);
-
+  const reportPage = parsePositiveInt(req.query.reportPage || req.body.reportPage, 1);
+  const auditPage = parsePositiveInt(req.query.auditPage || req.body.auditPage, 1);
   const dispatchers = await Dispatcher.find().sort({ createdAt: -1 }).lean();
-  const dispatcherById = new Map(dispatchers.map(d => [String(d._id), d]));
-  const reportsTotal = await Report.countDocuments(where);
-  const reportPagerMeta = buildPagerMeta(reportPage, reportLimit, reportsTotal);
+  const reportTotal = await Report.countDocuments(where);
+  const reportTotalPages = Math.max(1, Math.ceil(reportTotal / ADMIN_REPORTS_PAGE_SIZE));
+  const safeReportPage = Math.min(reportPage, reportTotalPages);
   const reports = await Report.find(where)
     .sort({ timestamp: -1 })
-    .skip(reportPagerMeta.skip)
-    .limit(reportPagerMeta.limit)
+    .skip((safeReportPage - 1) * ADMIN_REPORTS_PAGE_SIZE)
+    .limit(ADMIN_REPORTS_PAGE_SIZE)
     .lean({ virtuals: true });
-  const reportsWithDispatcher = reports.map(r => {
-    const assignedId = String((r && r.assignedToId) || '').trim();
-    const assigned = assignedId ? dispatcherById.get(assignedId) : null;
-    return {
-      ...r,
-      assignedDispatcher: String(r.assignedToUsername || (assigned && assigned.username) || '').trim(),
-    };
-  });
 
   const auditWhere = { actorRole: 'dispatcher' };
   const auditTotal = await AuditLog.countDocuments(auditWhere);
-  const auditPagerMeta = buildPagerMeta(auditPage, auditLimit, auditTotal);
+  const auditTotalPages = Math.max(1, Math.ceil(auditTotal / ADMIN_AUDIT_PAGE_SIZE));
+  const safeAuditPage = Math.min(auditPage, auditTotalPages);
   const auditLogs = await AuditLog.find(auditWhere)
     .sort({ timestamp: -1 })
-    .skip(auditPagerMeta.skip)
-    .limit(auditPagerMeta.limit)
+    .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
+    .limit(ADMIN_AUDIT_PAGE_SIZE)
     .lean();
-
-  const baseQuery = {
-    from,
-    to,
-    reportLimit,
-    auditLimit,
-  };
   return res.status(statusCode).render('admin', {
     dispatchers,
     reports: reportsWithDispatcher,
     auditLogs,
     stats: {
-      totalReports: reportsTotal,
+      totalReports: reportTotal,
       activeDispatchers: dispatchers.filter(d => d.isActive).length,
       totalDispatchers: dispatchers.length,
       auditCount: auditTotal,
     },
+    reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
+    auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
     from,
     to,
-    reportLimit,
-    auditLimit,
-    reportPager: buildPagerView(baseQuery, 'reports', 'reportPage', reportPagerMeta),
-    auditPager: buildPagerView(baseQuery, 'audit', 'auditPage', auditPagerMeta),
+    tab: pickAdminTab(req.body.tab || req.query.tab),
     currentUser: req.auth,
     error: options.error || '',
     success: options.success || '',
   });
+}
+
+function pickAdminTab(tabRaw) {
+  const tab = String(tabRaw || '').trim();
+  return ['dashboard', 'reports', 'dispatchers', 'audit'].includes(tab) ? tab : 'dashboard';
+}
+
+function adminRedirectUrl(req, flash = {}) {
+  const params = new URLSearchParams();
+  const tab = pickAdminTab(req.body.tab || req.query.tab);
+  if (tab !== 'dashboard') params.set('tab', tab);
+  const reportPage = parsePositiveInt(req.body.reportPage || req.query.reportPage, 0);
+  const auditPage = parsePositiveInt(req.body.auditPage || req.query.auditPage, 0);
+  if (reportPage > 0) params.set('reportPage', String(reportPage));
+  if (auditPage > 0) params.set('auditPage', String(auditPage));
+  if (flash.ok) params.set('ok', String(flash.ok));
+  if (flash.err) params.set('err', String(flash.err));
+  const q = params.toString();
+  return q ? `/admin?${q}` : '/admin';
+}
+
+function parsePositiveInt(value, fallback = 1) {
+  const n = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function buildPaginationMeta(page, totalCount, pageSize) {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  return {
+    page: safePage,
+    pageSize,
+    totalCount,
+    totalPages,
+    hasPrev: safePage > 1,
+    hasNext: safePage < totalPages,
+  };
 }
 
 function escHtml(s) {
@@ -1643,6 +1676,7 @@ function buildExcelHtml(reports) {
       <td>${escHtml(r.reportId || r._id)}</td>
       <td>${escHtml(r.emergencyType)}</td>
       <td>${escHtml(r.status)}</td>
+      <td>${escHtml(r.dispatcherName)}</td>
       <td>${escHtml(r.severity)}</td>
       <td>${escHtml(r.name)}</td>
       <td>${escHtml(r.contact)}</td>
@@ -1656,7 +1690,7 @@ function buildExcelHtml(reports) {
   return `<!doctype html><html><head><meta charset="utf-8"></head><body>
   <table border="1">
     <thead>
-      <tr><th>ID</th><th>Type</th><th>Status</th><th>Severity</th><th>Name</th><th>Contact</th><th>Barangay</th><th>Landmark</th><th>Street</th><th>Timestamp</th></tr>
+      <tr><th>ID</th><th>Type</th><th>Status</th><th>Dispatcher</th><th>Severity</th><th>Name</th><th>Contact</th><th>Barangay</th><th>Landmark</th><th>Street</th><th>Timestamp</th></tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
