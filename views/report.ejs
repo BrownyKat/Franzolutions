@@ -1444,12 +1444,137 @@
     });
   }
 
-  window.addEventListener('unhandledrejection', () => {
-    toast('Request error', 'An unexpected error occurred. Please try again.', 'warn');
-  });
-  window.addEventListener('error', () => {
-    toast('Page error', 'Something went wrong on this page. Please refresh if needed.', 'warn');
-  });
+  // GPS accuracy + repeat-detect overrides
+  async function detectGPS() {
+    const btn = document.getElementById('gpsBtn');
+    btn.disabled = true;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;animation:spin .9s linear infinite"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/></svg> Detecting...`;
+    if (!navigator.geolocation) { btn.textContent = 'GPS not available on this device'; btn.disabled = false; return; }
+    try {
+      const pos = await acquireBestGpsPosition(14000, 25);
+      if (!pos) {
+        btn.textContent = 'Could not detect location - fill in manually.';
+        return;
+      }
+      await applyDetectedCoords(pos, { overwriteExisting: true });
+      setRequiredError(btn, false);
+      btn.classList.add('got');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4.5 12.75l6 6 9-13.5"/></svg> Detected: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} (+/-${Math.round(pos.coords.accuracy || 0)}m)`;
+    } catch (_e) {
+      btn.textContent = 'Could not detect location - fill in manually.';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function maybeSetBarangay(detected, overwriteExisting = false) {
+    const raw = String(detected || '').trim();
+    if (!raw) return false;
+    const inp = document.getElementById('iBarangay');
+    if (!inp) return false;
+    if (!overwriteExisting && inp.value.trim()) return false;
+    const target = raw.replace(/^brgy\.?\s*/i, 'Barangay ').trim();
+    if (inp.value.trim() === target) return false;
+    inp.value = target;
+    setRequiredError(inp, false);
+    return true;
+  }
+
+  function maybeSetLandmark(detected, overwriteExisting = false) {
+    const text = String(detected || '').trim();
+    if (!text) return false;
+    const inp = document.getElementById('iLandmark');
+    if (!inp) return false;
+    if (!overwriteExisting && inp.value.trim()) return false;
+    if (inp.value.trim() === text) return false;
+    inp.value = text;
+    setRequiredError(inp, false);
+    return true;
+  }
+
+  function maybeSetStreet(detected, overwriteExisting = false) {
+    const text = String(detected || '').trim();
+    if (!text) return false;
+    const inp = document.getElementById('iStreet');
+    if (!inp) return false;
+    if (!overwriteExisting && inp.value.trim()) return false;
+    if (inp.value.trim() === text) return false;
+    inp.value = text;
+    setRequiredError(inp, false);
+    return true;
+  }
+
+  async function autoFillLocationFromCoords(lat, lng, options = {}) {
+    const overwriteExisting = !!options.overwriteExisting;
+    const info = await reverseGeocode(lat, lng);
+    const fallbackLandmark = `Near ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    const changedBarangay = maybeSetBarangay(info.barangay || '', overwriteExisting);
+    const changedLandmark = maybeSetLandmark(info.landmark ? `Near ${info.landmark}` : fallbackLandmark, overwriteExisting);
+    const changedStreet = maybeSetStreet(info.street || '', overwriteExisting);
+    if (changedBarangay || changedLandmark || changedStreet) {
+      toast('Location autofill', 'Location fields updated from detected GPS.');
+    }
+  }
+
+  async function applyDetectedCoords(pos, options = {}) {
+    if (!pos || !pos.coords) return;
+    const gps = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+    document.getElementById('iGPS').value = gps;
+    document.getElementById('iGPSAt').value = String(Date.now());
+    document.getElementById('iGPSAcc').value = String(Math.round(pos.coords.accuracy || 0));
+    renderReporterMap(gps, 'Detected location');
+    await autoFillLocationFromCoords(pos.coords.latitude, pos.coords.longitude, options);
+  }
+
+  async function acquireBestGpsPosition(timeoutMs = 12000, targetAccuracyM = 30) {
+    if (!navigator.geolocation) return null;
+    return new Promise(resolve => {
+      let best = null;
+      let done = false;
+      let watchId = null;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (watchId !== null) {
+          try { navigator.geolocation.clearWatch(watchId); } catch (_e) {}
+        }
+        resolve(best);
+      };
+      const onSuccess = (pos) => {
+        if (!pos || !pos.coords) return;
+        if (!best || Number(pos.coords.accuracy || Infinity) < Number(best.coords.accuracy || Infinity)) {
+          best = pos;
+        }
+        if (Number(pos.coords.accuracy || Infinity) <= targetAccuracyM) finish();
+      };
+      const onError = () => {};
+
+      try {
+        watchId = navigator.geolocation.watchPosition(
+          onSuccess,
+          onError,
+          { enableHighAccuracy: true, timeout: Math.min(timeoutMs, 10000), maximumAge: 0 }
+        );
+      } catch (_e) {}
+
+      navigator.geolocation.getCurrentPosition(
+        onSuccess,
+        onError,
+        { enableHighAccuracy: true, timeout: Math.min(timeoutMs, 10000), maximumAge: 0 }
+      );
+
+      setTimeout(finish, timeoutMs);
+    });
+  }
+
+  async function tryGetLiveGps(timeoutMs = 12000) {
+    if (!navigator.geolocation) return null;
+    const pos = await acquireBestGpsPosition(timeoutMs, 30);
+    if (!pos) return null;
+    await applyDetectedCoords(pos, { overwriteExisting: false });
+    setRequiredError(document.getElementById('gpsBtn'), false);
+    return `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+  }
 </script>
 </body>
 </html>

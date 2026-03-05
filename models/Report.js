@@ -14,6 +14,8 @@ const reportSchema = new mongoose.Schema(
     gps:           { type: String, default: '' },
     photo:         { type: String, default: null },  // base64 data-URL
     status:        { type: String, default: 'new', enum: ['new','verifying','dispatched','resolved','false-report'] },
+    dispatcherId:  { type: String, default: '' },
+    dispatcherName:{ type: String, default: '' },
     credibility:   { type: String, default: 'low',  enum: ['low','medium','high'] },
     isPanic:       { type: Boolean, default: false },
     assignedToId:  { type: String, default: '' },
