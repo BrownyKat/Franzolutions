@@ -517,9 +517,11 @@ app.get('/admin', requireRolesPage(['admin'], '/login'), async (req, res) => {
       .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
       .limit(ADMIN_AUDIT_PAGE_SIZE)
       .lean();
+    const reportPagination = buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE);
+    const auditPagination = buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE);
     res.render('admin', {
       dispatchers,
-      reports: reportsWithDispatcher,
+      reports,
       auditLogs,
       stats: {
         totalReports: reportTotal,
@@ -527,8 +529,24 @@ app.get('/admin', requireRolesPage(['admin'], '/login'), async (req, res) => {
         totalDispatchers: dispatchers.length,
         auditCount: auditTotal,
       },
-      reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
-      auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
+      reportPagination,
+      auditPagination,
+      reportPager: {
+        currentPage: reportPagination.page,
+        totalPages: reportPagination.totalPages,
+        totalCount: reportPagination.totalCount,
+        hasPrev: reportPagination.hasPrev,
+        hasNext: reportPagination.hasNext,
+      },
+      auditPager: {
+        currentPage: auditPagination.page,
+        totalPages: auditPagination.totalPages,
+        totalCount: auditPagination.totalCount,
+        hasPrev: auditPagination.hasPrev,
+        hasNext: auditPagination.hasNext,
+      },
+      reportLimit: ADMIN_REPORTS_PAGE_SIZE,
+      auditLimit: ADMIN_AUDIT_PAGE_SIZE,
       from,
       to,
       tab: pickAdminTab(req.query.tab),
@@ -1635,9 +1653,11 @@ async function renderAdminPage(req, res, options = {}, statusCode = 200) {
     .skip((safeAuditPage - 1) * ADMIN_AUDIT_PAGE_SIZE)
     .limit(ADMIN_AUDIT_PAGE_SIZE)
     .lean();
+  const reportPagination = buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE);
+  const auditPagination = buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE);
   return res.status(statusCode).render('admin', {
     dispatchers,
-    reports: reportsWithDispatcher,
+    reports,
     auditLogs,
     stats: {
       totalReports: reportTotal,
@@ -1645,8 +1665,24 @@ async function renderAdminPage(req, res, options = {}, statusCode = 200) {
       totalDispatchers: dispatchers.length,
       auditCount: auditTotal,
     },
-    reportPagination: buildPaginationMeta(safeReportPage, reportTotal, ADMIN_REPORTS_PAGE_SIZE),
-    auditPagination: buildPaginationMeta(safeAuditPage, auditTotal, ADMIN_AUDIT_PAGE_SIZE),
+    reportPagination,
+    auditPagination,
+    reportPager: {
+      currentPage: reportPagination.page,
+      totalPages: reportPagination.totalPages,
+      totalCount: reportPagination.totalCount,
+      hasPrev: reportPagination.hasPrev,
+      hasNext: reportPagination.hasNext,
+    },
+    auditPager: {
+      currentPage: auditPagination.page,
+      totalPages: auditPagination.totalPages,
+      totalCount: auditPagination.totalCount,
+      hasPrev: auditPagination.hasPrev,
+      hasNext: auditPagination.hasNext,
+    },
+    reportLimit: ADMIN_REPORTS_PAGE_SIZE,
+    auditLimit: ADMIN_AUDIT_PAGE_SIZE,
     from,
     to,
     tab: pickAdminTab(req.body.tab || req.query.tab),
