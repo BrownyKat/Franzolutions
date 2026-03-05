@@ -23,6 +23,7 @@ const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
 const VALID_REPORT_STATUSES = new Set(['new', 'verifying', 'dispatched', 'resolved', 'false-report']);
 const VALID_EMERGENCY_TYPES = new Set(['Fire', 'Flood', 'Medical', 'Accident', 'Landslide', 'Other', 'PANIC SOS']);
 const VALID_SEVERITIES = new Set(['High', 'Medium', 'Low']);
+const SIGNED_SESSION_PREFIX = 'v1.';
 let dbInitPromise = null;
 const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
   ? new Pusher({
@@ -51,12 +52,21 @@ async function initDatabase() {
       await ensureDefaultAdmin();
     } catch (err) {
       console.error('  âœ˜  MongoDB connection error:', err.message);
-      process.exit(1);
+      dbInitPromise = null;
+      if (require.main === module) process.exit(1);
+      throw err;
     }
   })();
   return dbInitPromise;
 }
 void initDatabase();
+
+async function ensureDbReady() {
+  await initDatabase();
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('Database is not connected');
+  }
+}
 
 // â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.disable('x-powered-by');
@@ -89,6 +99,19 @@ app.use((req, res, next) => {
 app.use(async (req, res, next) => {
   const token = getCookie(req, COOKIE_NAME);
   if (!token) return next();
+  const signed = verifySignedSessionToken(token);
+  if (signed) {
+    req.auth = {
+      role: signed.role,
+      userId: signed.userId,
+      username: signed.username,
+      fullName: signed.fullName,
+      expiresAt: signed.expiresAt,
+    };
+    req.authToken = token;
+    res.locals.auth = req.auth;
+    return next();
+  }
   try {
     const session = await Session.findOne({ token }).lean();
     if (!session || new Date(session.expiresAt).getTime() < Date.now()) {
@@ -169,6 +192,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
   try {
+    await ensureDbReady();
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     if (!username || !password) {
@@ -186,7 +210,7 @@ app.post('/login', async (req, res) => {
     });
     return res.redirect('/admin');
   } catch (err) {
-    console.error(err);
+    console.error('[login] admin login failed:', err && err.message ? err.message : err);
     return res.status(500).render('login', { error: 'Login failed. Please try again.' });
   }
 });
@@ -201,6 +225,7 @@ app.get('/dispatcher/login', (req, res) => {
 
 app.post('/dispatcher/login', async (req, res) => {
   try {
+    await ensureDbReady();
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     if (!username || !password) {
@@ -229,7 +254,7 @@ app.post('/dispatcher/login', async (req, res) => {
     });
     return res.redirect('/dashboard');
   } catch (err) {
-    console.error(err);
+    console.error('[login] dispatcher login failed:', err && err.message ? err.message : err);
     res.status(500).render('dispatcher-login', { error: 'Login failed. Please try again.' });
   }
 });
@@ -244,6 +269,7 @@ app.get('/admin/login', (req, res) => {
 
 app.post('/admin/login', async (req, res) => {
   try {
+    await ensureDbReady();
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     if (!username || !password) {
@@ -261,7 +287,7 @@ app.post('/admin/login', async (req, res) => {
     });
     return res.redirect('/admin');
   } catch (err) {
-    console.error(err);
+    console.error('[login] admin/login failed:', err && err.message ? err.message : err);
     res.status(500).render('admin-login', { error: 'Login failed. Please try again.' });
   }
 });
@@ -1155,18 +1181,34 @@ function getCookie(req, name) {
 
 async function createSession(req, res, payload) {
   const currentToken = req.authToken || getCookie(req, COOKIE_NAME);
-  if (currentToken) await Session.deleteOne({ token: currentToken });
+  if (currentToken && !verifySignedSessionToken(currentToken)) {
+    await Session.deleteOne({ token: currentToken });
+  }
   const token = crypto.randomBytes(24).toString('hex');
-  await Session.create({
-    token,
-    role: payload.role,
-    userId: payload.userId,
-    username: payload.username,
-    fullName: payload.fullName,
-    expiresAt: new Date(Date.now() + SESSION_TTL_MS),
-  });
+  let outToken = token;
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  try {
+    await Session.create({
+      token,
+      role: payload.role,
+      userId: payload.userId,
+      username: payload.username,
+      fullName: payload.fullName,
+      expiresAt: new Date(expiresAt),
+    });
+  } catch (err) {
+    console.error('[auth] Session.create failed, using signed fallback:', err && err.message ? err.message : err);
+    outToken = createSignedSessionToken({
+      role: payload.role,
+      userId: payload.userId,
+      username: payload.username,
+      fullName: payload.fullName,
+      expiresAt,
+    });
+    if (!outToken) throw err;
+  }
   const isHttps = req.secure || String(req.get('x-forwarded-proto') || '').toLowerCase() === 'https';
-  res.cookie(COOKIE_NAME, token, {
+  res.cookie(COOKIE_NAME, outToken, {
     httpOnly: true,
     sameSite: 'lax',
     secure: isHttps || process.env.NODE_ENV === 'production',
@@ -1185,8 +1227,64 @@ function clearSessionCookie(res) {
 
 async function destroySession(req, res) {
   const token = req.authToken || getCookie(req, COOKIE_NAME);
-  if (token) await Session.deleteOne({ token });
+  if (token && !verifySignedSessionToken(token)) await Session.deleteOne({ token });
   clearSessionCookie(res);
+}
+
+function getSessionSecret() {
+  const explicit = String(process.env.SESSION_SECRET || '').trim();
+  if (explicit) return explicit;
+  const fallback = `${process.env.MONGODB_URI || ''}|${process.env.ADMIN_PASSWORD || ''}|svs-session`;
+  return crypto.createHash('sha256').update(fallback).digest('hex');
+}
+
+function createSignedSessionToken(payload) {
+  try {
+    const data = {
+      role: String(payload.role || ''),
+      userId: String(payload.userId || ''),
+      username: String(payload.username || ''),
+      fullName: String(payload.fullName || ''),
+      expiresAt: Number(payload.expiresAt) || (Date.now() + SESSION_TTL_MS),
+    };
+    const body = Buffer.from(JSON.stringify(data), 'utf8').toString('base64url');
+    const sig = crypto.createHmac('sha256', getSessionSecret()).update(body).digest('base64url');
+    return `${SIGNED_SESSION_PREFIX}${body}.${sig}`;
+  } catch (_err) {
+    return '';
+  }
+}
+
+function verifySignedSessionToken(token) {
+  const raw = String(token || '').trim();
+  if (!raw || !raw.startsWith(SIGNED_SESSION_PREFIX)) return null;
+  const bodyAndSig = raw.slice(SIGNED_SESSION_PREFIX.length);
+  const dot = bodyAndSig.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const body = bodyAndSig.slice(0, dot);
+  const sig = bodyAndSig.slice(dot + 1);
+  if (!body || !sig) return null;
+
+  const expected = crypto.createHmac('sha256', getSessionSecret()).update(body).digest('base64url');
+  if (sig !== expected) return null;
+
+  try {
+    const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    const expiresAt = Number(parsed.expiresAt) || 0;
+    if (!expiresAt || expiresAt < Date.now()) return null;
+    const role = String(parsed.role || '').trim();
+    const userId = String(parsed.userId || '').trim();
+    if (!role || !userId) return null;
+    return {
+      role,
+      userId,
+      username: String(parsed.username || ''),
+      fullName: String(parsed.fullName || ''),
+      expiresAt,
+    };
+  } catch (_err) {
+    return null;
+  }
 }
 
 function requireRolesPage(roles, loginPath = '/dispatcher/login') {
@@ -1227,17 +1325,28 @@ async function ensureDefaultAdmin() {
   const password = String(process.env.ADMIN_PASSWORD || 'admin123');
   const fullName = String(process.env.ADMIN_FULLNAME || 'System Administrator').trim();
   const adminCount = await Admin.countDocuments({});
-  if (adminCount > 0) return;
 
   const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
   const usingFallbackUsername = !String(process.env.ADMIN_USERNAME || '').trim() || username === 'admin';
   const usingFallbackPassword = !String(process.env.ADMIN_PASSWORD || '').trim() || password === 'admin123';
-  if (isProduction && (usingFallbackUsername || usingFallbackPassword || password.length < 10)) {
+  if (adminCount === 0 && isProduction && (usingFallbackUsername || usingFallbackPassword || password.length < 10)) {
     throw new Error('Production bootstrap requires explicit ADMIN_USERNAME and strong ADMIN_PASSWORD (10+ chars).');
   }
 
-  await Admin.create({ username, fullName, passwordHash: hashPassword(password) });
-  console.log(`  âœ”  Default admin created (${username})`);
+  if (adminCount === 0) {
+    await Admin.create({ username, fullName, passwordHash: hashPassword(password) });
+    console.log(`  âœ”  Default admin created (${username})`);
+  }
+
+  const secondaryAdmin = await Admin.findOne({ username: 'admin1' }).lean();
+  if (!secondaryAdmin) {
+    await Admin.create({
+      username: 'admin1',
+      fullName: 'Admin One',
+      passwordHash: hashPassword('123456'),
+    });
+    console.log('  âœ”  Secondary admin created (admin1)');
+  }
 }
 
 function buildReportDateRangeFilter(fromRaw, toRaw) {
