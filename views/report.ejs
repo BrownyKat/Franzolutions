@@ -60,19 +60,14 @@
       border-bottom:1px solid var(--border);
       box-shadow:0 1px 2px rgba(0,0,0,.05);
     }
-    .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;}
-    .brand-shield{
-      width:38px;height:38px;
-      background:linear-gradient(145deg,var(--blue),var(--red));
-      border-radius:10px;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 4px 14px rgba(245,158,11,.38);
-      flex-shrink:0;
+    .brand{display:flex;align-items:center;gap:2px;text-decoration:none;color:inherit;}
+    .brand-logo{
+      width:120px;height:100px;object-fit:contain;display:block;flex-shrink:0;
     }
-    .brand-shield svg{width:22px;height:22px;stroke:#fff;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;}
-    .brand-name{font-weight:800;font-size:.97rem;letter-spacing:-.2px;line-height:1.15;color:var(--text);}
+    .brand-text{margin-left:-24px;}
+    .brand-name{font-weight:800;font-size:1.2rem;letter-spacing:-.2px;line-height:1.1;color:var(--text);}
     .brand-name em{font-style:normal;color:var(--amber-dark);}
-    .brand-sub{font-family:'JetBrains Mono',monospace;font-size:.55rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+    .brand-sub{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
     .header-right{display:flex;align-items:center;gap:.65rem;}
     .nav-btn{
       display:inline-flex;align-items:center;gap:5px;
@@ -560,14 +555,11 @@
       grid-template-columns:1.35fr 1fr;
       gap:1rem 1.5rem;
     }
-    .rf-brand{display:flex;align-items:flex-start;gap:.75rem;}
-    .rf-badge{
-      width:38px;height:38px;border-radius:10px;flex-shrink:0;
-      background:linear-gradient(145deg,var(--blue),var(--red));
-      color:#fff;display:flex;align-items:center;justify-content:center;
-      font-weight:900;font-family:'JetBrains Mono',monospace;letter-spacing:.4px;
-      box-shadow:0 4px 14px rgba(29,78,216,.25);
+    .rf-brand{display:flex;align-items:center;gap:.45rem;}
+    .rf-logo{
+      width:78px;height:68px;object-fit:contain;display:block;flex-shrink:0;
     }
+    .rf-copy{margin-left:-10px;}
     .rf-name{font-weight:900;font-size:.95rem;line-height:1.15;}
     .rf-sub{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
     .rf-text{font-size:.8rem;color:var(--text2);line-height:1.65;margin-top:.38rem;max-width:340px;}
@@ -601,11 +593,8 @@
 <!-- HEADER -->
 <header class="header">
   <a href="/" class="brand">
-    <div class="brand-shield">
-      <!-- Heroicon: shield-check -->
-      <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>
-    </div>
-    <div>
+    <img class="brand-logo" src="/images/logo.png" alt="MDRRMO SVS Logo">
+    <div class="brand-text">
       <div class="brand-name">SVS</div>
       <div class="brand-sub">Smart Verification System</div>
     </div>
@@ -860,8 +849,8 @@
   <div class="report-footer-inner">
     <div>
       <div class="rf-brand">
-        <div class="rf-badge">SVS</div>
-        <div>
+        <img class="rf-logo" src="/images/logo.png" alt="MDRRMO SVS Logo">
+        <div class="rf-copy">
           <div class="rf-name">Smart Verification System</div>
           <div class="rf-sub">Emergency Reporting</div>
         </div>
@@ -1578,4 +1567,5 @@
 </script>
 </body>
 </html>
+
 

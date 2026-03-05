@@ -31,14 +31,10 @@
       display: flex; align-items: center; justify-content: center;
       gap: 14px; margin-bottom: 2.75rem;
     }
-    .hero-shield {
-      width: 56px; height: 56px;
-      background: linear-gradient(145deg, var(--blue), var(--red));
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 6px 20px rgba(245,158,11,.42), 0 2px 6px rgba(0,0,0,.1);
+    .hero-logo {
+      width: 100px; height: 100px; object-fit: contain;
+      display: block;
     }
-    .hero-shield svg { width: 30px; height: 30px; stroke: #fff; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .hero-copy { text-align: left; }
     .hero-name { font-weight: 900; font-size: 1.45rem; letter-spacing: -0.5px; line-height: 1.1; }
     .hero-name em { font-style: normal; color: var(--amber-dark); }
@@ -133,12 +129,7 @@
 <div class="landing">
 
   <div class="hero-brand">
-    <div class="hero-shield">
-      <!-- Heroicon: shield-check -->
-      <svg viewBox="0 0 24 24">
-        <path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
-      </svg>
-    </div>
+    <img class="hero-logo" src="/images/logo.png" alt="MDRRMO SVS Logo">
     <div class="hero-copy">
       <div class="hero-name">SVS</div>
       <div class="hero-sub">Smart Verification System</div>
@@ -179,7 +170,7 @@
       </div>
     </a>
 
-    <a href="/admin/login?force=1" class="role-card admin">
+    <a href="/login?force=1" class="role-card admin">
       <div class="role-icon-box">
         <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75m6-3.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
       </div>
@@ -199,3 +190,4 @@
 </div>
 </body>
 </html>
+

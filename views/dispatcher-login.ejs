@@ -7,6 +7,8 @@
   <style>
     body{margin:0;font-family:Arial,sans-serif;color:#0f172a;display:flex;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(520px 280px at 100% 0,rgba(29,78,216,.24),transparent 64%),radial-gradient(420px 260px at 0 100%,rgba(250,204,21,.28),transparent 66%),#e7f0ff}
     .card{width:min(420px,92vw);background:linear-gradient(180deg,#f6f9ff,#ffffff);border:1px solid #9dc4ef;border-radius:14px;padding:24px;box-shadow:0 12px 28px rgba(15,23,42,.12);animation:fadeUp .4s ease both}
+    .logo-wrap{text-align:center;margin-bottom:10px}
+    .logo{width:170px;max-width:56vw;height:auto;object-fit:contain;display:inline-block}
     h1{margin:0 0 8px;font-size:24px}
     p{margin:0 0 18px;color:#1e3a8a;font-size:14px}
     label{display:block;font-size:12px;font-weight:700;margin:10px 0 6px;text-transform:uppercase;color:#1e3a8a}
@@ -20,6 +22,7 @@
 </head>
 <body>
   <form class="card" method="post" action="/dispatcher/login" id="dispatcherLoginForm">
+    <div class="logo-wrap"><img class="logo" src="/images/logo.png" alt="MDRRMO SVS Logo"></div>
     <h1>Dispatcher Login</h1>
     <p>Sign in to access the dispatcher operations console.</p>
     <% if (error) { %><div class="err"><%= error %></div><% } %>
@@ -46,3 +49,4 @@
   </script>
 </body>
 </html>
+

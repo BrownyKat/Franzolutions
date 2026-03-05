@@ -46,52 +46,43 @@
     }
     .side{
       width:312px;flex-shrink:0;
-      background:#991b1b;
-      border-right:1px solid var(--border);
-      padding:16px 14px;
+      background:linear-gradient(180deg,#7f1d1d 0%, #991b1b 45%, #7f1d1d 100%);
+      border-right:1px solid rgba(255,255,255,.18);
+      padding:18px 14px 16px;
       position:sticky;top:0;height:100vh;overflow:auto;
     }
     .brand-wrap{
-      border:1px solid var(--border);
-      border-radius:var(--r-lg);
-      background:rgba(255,255,255,.94);
-      padding:13px 12px 12px;
-      box-shadow:var(--shadow-sm);
+      padding:4px 10px 14px;
       margin-bottom:14px;
+      border-bottom:1px solid rgba(255,255,255,.22);
+      text-align:center;
     }
     .brand{
-      display:flex;align-items:center;gap:10px;
-      font-weight:800;font-size:18px;line-height:1.1;
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+      font-weight:800;font-size:18px;line-height:1.1;color:#fff7ed;
     }
-    .brand-badge{
-      width:38px;height:38px;border-radius:10px;
-      background:linear-gradient(145deg,#1d4ed8,#dc2626);
-      display:flex;align-items:center;justify-content:center;
-      color:#fff;font-weight:900;
-      box-shadow:0 6px 16px rgba(185,28,28,.35);
-      font-family:'JetBrains Mono',monospace;
-      letter-spacing:.5px;
-      flex-shrink:0;
+    .brand-logo{
+      width:260px;height:138px;object-fit:contain;display:block;
     }
-    .sub{font-size:12px;color:#7f1d1d;margin-top:6px;}
+    .sub{font-size:12px;color:#fecaca;margin-top:6px;font-weight:600;letter-spacing:.4px;}
     .nav-title{
       font-family:'JetBrains Mono',monospace;
-      font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#fecaca;
-      margin:10px 4px 8px;
+      font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#fde68a;
+      margin:11px 4px 9px;text-align:center;
     }
-    .nav{display:flex;flex-direction:column;gap:8px}
+    .nav{display:flex;flex-direction:column;gap:14px}
     .nav-item,.nav button{
       display:flex;align-items:center;gap:10px;width:100%;
       text-align:left;text-decoration:none;
-      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
-      border-radius:11px;padding:12px 11px;
+      background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.24);
+      border-radius:11px;padding:14px 13px;
       color:#fff7ed;font-weight:700;font-size:15px;line-height:1.2;cursor:pointer;
       transition:transform .18s ease, border-color .18s ease, background .18s ease;
       font-family:'Outfit',sans-serif;
-      position:relative;
+      position:relative;backdrop-filter:blur(2px);
     }
     .nav-item svg,.nav button svg{
-      width:20px;height:20px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
+      width:20px;height:10px;min-width:20px;min-height:20px;stroke:currentColor;fill:none;stroke-width:1.9;
       stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;
       overflow:visible;
     }
@@ -368,10 +359,10 @@
     <aside class="side">
       <div class="brand-wrap">
         <div class="brand">
-          <span class="brand-badge">SVS</span>
+          <img class="brand-logo" src="/images/logo.png" alt="MDRRMO SVS Logo">
           <span>SVS Admin Dashboard</span>
         </div>
-        <div class="sub"><%= currentUser && (currentUser.fullName || currentUser.username) %></div>
+        <div class="sub">System Administrator</div>
       </div>
       <div class="nav-title">Navigation</div>
       <nav class="nav">
@@ -685,10 +676,10 @@
   <script>
     try {
       if (!sessionStorage.getItem('svs_admin_window_ok')) {
-        window.location.replace('/admin/login?force=1');
+        window.location.replace('/login?force=1');
       }
     } catch (_e) {
-      window.location.replace('/admin/login?force=1');
+      window.location.replace('/login?force=1');
     }
 
     function safeRun(fn) {
@@ -898,3 +889,4 @@
   </script>
 </body>
 </html>
+
