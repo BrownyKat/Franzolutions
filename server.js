@@ -46,15 +46,18 @@ async function initDatabase() {
   dbInitPromise = (async () => {
     try {
       const mongoUri = String(process.env.MONGODB_URI || '').trim();
+      const mongoDb = String(process.env.MONGODB_DB || '').trim();
       if (!mongoUri) {
         throw new Error('MONGODB_URI is not configured');
       }
-      await mongoose.connect(mongoUri);
+      const connectOptions = {};
+      if (mongoDb) connectOptions.dbName = mongoDb;
+      await mongoose.connect(mongoUri, connectOptions);
       console.log('  âœ”  MongoDB connected');
       await ensureDefaultAdmin();
     } catch (err) {
       console.error('  âœ˜  MongoDB connection error:', err.message);
-      if (require.main === module) process.exit(1);
+      process.exit(1);
     }
   })();
   return dbInitPromise;
