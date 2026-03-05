@@ -26,6 +26,10 @@ const ROLE_COOKIE_NAMES = {
   dispatcher: 'auth_token_dispatcher',
 };
 const REALTIME_CHANNEL = process.env.PUSHER_CHANNEL || 'mdrrmo-reports';
+const VALID_REPORT_STATUSES = new Set(['new', 'verifying', 'dispatched', 'resolved', 'false-report']);
+const VALID_EMERGENCY_TYPES = new Set(['Fire', 'Flood', 'Medical', 'Accident', 'Landslide', 'Other', 'PANIC SOS']);
+const VALID_SEVERITIES = new Set(['High', 'Medium', 'Low']);
+let dbInitPromise = null;
 const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.env.PUSHER_SECRET && process.env.PUSHER_CLUSTER
   ? new Pusher({
     appId: process.env.PUSHER_APP_ID,
@@ -38,20 +42,53 @@ const pusher = process.env.PUSHER_APP_ID && process.env.PUSHER_KEY && process.en
 
 // â”€â”€ Database connection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function initDatabase() {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('  âœ”  MongoDB connected');
-    await ensureDefaultAdmin();
-  } catch (err) {
-    console.error('  âœ˜  MongoDB connection error:', err.message);
-    if (require.main === module) process.exit(1);
-  }
+  if (dbInitPromise) return dbInitPromise;
+  dbInitPromise = (async () => {
+    try {
+      const mongoUri = String(process.env.MONGODB_URI || '').trim();
+      if (!mongoUri) {
+        throw new Error('MONGODB_URI is not configured');
+      }
+      await mongoose.connect(mongoUri);
+      console.log('  âœ”  MongoDB connected');
+      await ensureDefaultAdmin();
+    } catch (err) {
+      console.error('  âœ˜  MongoDB connection error:', err.message);
+      if (require.main === module) process.exit(1);
+    }
+  })();
+  return dbInitPromise;
 }
 void initDatabase();
 
 // â”€â”€ Middleware â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use((err, req, res, next) => {
+  if (!err) return next();
+  if (err.type === 'entity.too.large') {
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(413).json({ error: 'Payload too large' });
+    }
+    return res.status(413).send('Payload too large');
+  }
+  if (err instanceof SyntaxError && Object.prototype.hasOwnProperty.call(err, 'body')) {
+    if (String(req.path || '').startsWith('/api/')) {
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+    return res.status(400).send('Invalid request body');
+  }
+  return next(err);
+});
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(), camera=()');
+  next();
+});
 app.use(async (req, res, next) => {
   const roleOrder = preferredRolesForPath(req.path);
   const candidates = [];
@@ -106,6 +143,24 @@ app.use((req, res, next) => {
   };
   next();
 });
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  const origin = String(req.get('origin') || '').trim();
+  if (!origin) return next();
+
+  let originHost = '';
+  try {
+    originHost = new URL(origin).host;
+  } catch (_e) {
+    return res.status(403).json({ error: 'Forbidden origin' });
+  }
+
+  const requestHost = String(req.get('x-forwarded-host') || req.get('host') || '').trim();
+  if (!originHost || !requestHost || originHost !== requestHost) {
+    return res.status(403).json({ error: 'Forbidden origin' });
+  }
+  return next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -126,8 +181,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  if (req.auth?.role === 'admin') return res.redirect('/admin');
-  if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
+  if (String(req.query.force || '') !== '1') {
+    if (req.auth?.role === 'admin') return res.redirect('/admin');
+    if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
+  }
   res.render('login', { error: '' });
 });
 
@@ -156,8 +213,10 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/dispatcher/login', (req, res) => {
-  if (req.auth?.role === 'admin') return res.redirect('/admin');
-  if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
+  if (String(req.query.force || '') !== '1') {
+    if (req.auth?.role === 'admin') return res.redirect('/admin');
+    if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
+  }
   res.render('dispatcher-login', { error: '' });
 });
 
@@ -197,7 +256,10 @@ app.post('/dispatcher/login', async (req, res) => {
 });
 
 app.get('/admin/login', (req, res) => {
-  if (req.auth?.role === 'admin') return res.redirect('/admin');
+  if (String(req.query.force || '') !== '1') {
+    if (req.auth?.role === 'admin') return res.redirect('/admin');
+    if (req.auth?.role === 'dispatcher') return res.redirect('/dashboard');
+  }
   res.render('admin-login', { error: '' });
 });
 
@@ -255,8 +317,25 @@ app.get('/report', (_req, res) => res.render('report'));
 
 app.get('/dashboard', requireRolesPage(['dispatcher'], '/dispatcher/login'), async (req, res) => {
   try {
-    const reports = await Report.find().sort({ timestamp: -1 }).lean({ virtuals: true });
-    res.render('dashboard', { reports, currentUser: req.auth });
+    const reports = await Report.find(buildReportVisibilityQuery(req.auth)).sort({ timestamp: -1 }).lean({ virtuals: true });
+    const dispatcher = await Dispatcher.findById(req.auth.userId).lean();
+    if (!dispatcher) return res.redirect('/logout');
+    if (!dispatcher.isActive) return res.redirect('/dispatcher/logout');
+    const activeDispatchers = await Dispatcher.find({ isActive: true }).sort({ fullName: 1, username: 1 }).lean();
+    res.render('dashboard', {
+      reports,
+      currentUser: req.auth,
+      activeDispatchers: activeDispatchers.map(d => ({
+        id: String(d._id),
+        username: d.username || '',
+        fullName: d.fullName || d.username || '',
+      })),
+      dispatcherProfile: {
+        username: dispatcher.username || '',
+        fullName: dispatcher.fullName || '',
+        phone: dispatcher.phone || '',
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Database error loading dashboard');
@@ -322,6 +401,62 @@ app.post('/dispatcher/profile', requireRolesPage(['dispatcher'], '/dispatcher/lo
   }
 });
 
+app.post('/api/dispatcher/profile', requireRolesApi(['dispatcher']), async (req, res) => {
+  try {
+    const fullName = String(req.body.fullName || '').trim();
+    const phone = String(req.body.phone || '').trim();
+    const currentPassword = String(req.body.currentPassword || '');
+    const newPassword = String(req.body.newPassword || '');
+
+    const dispatcher = await Dispatcher.findById(req.auth.userId);
+    if (!dispatcher) return res.status(401).json({ error: 'Unauthorized' });
+
+    if (newPassword) {
+      if (!currentPassword || !verifyPassword(currentPassword, dispatcher.passwordHash)) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+      }
+      dispatcher.passwordHash = hashPassword(newPassword);
+    }
+
+    dispatcher.fullName = fullName;
+    dispatcher.phone = phone;
+    await dispatcher.save();
+
+    if (req.authToken) {
+      await Session.updateOne(
+        { token: req.authToken },
+        { $set: { fullName: dispatcher.fullName || dispatcher.username } }
+      );
+    }
+
+    await logAudit({
+      actorRole: 'dispatcher',
+      actorId: String(dispatcher._id),
+      actorName: dispatcher.fullName || dispatcher.username,
+      action: 'PROFILE_UPDATE',
+      targetType: 'DISPATCHER',
+      targetId: String(dispatcher._id),
+      details: 'Updated dispatcher profile',
+    });
+
+    return res.json({
+      success: true,
+      message: 'Profile updated.',
+      profile: {
+        username: dispatcher.username || '',
+        fullName: dispatcher.fullName || '',
+        phone: dispatcher.phone || '',
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Could not update profile' });
+  }
+});
+
 app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
   try {
     const { from, to, where } = buildReportDateRangeFilter(req.query.from, req.query.to);
@@ -348,7 +483,7 @@ app.get('/admin', requireRolesPage(['admin'], '/admin/login'), async (req, res) 
       .lean();
     res.render('admin', {
       dispatchers,
-      reports,
+      reports: reportsWithDispatcher,
       auditLogs,
       stats: {
         totalReports: reportTotal,
@@ -479,18 +614,41 @@ app.get('/admin/reports/export.pdf', requireRolesPage(['admin'], '/admin/login')
   }
 });
 
+app.post('/admin/reports/clear', requireRolesPage(['admin'], '/admin/login'), async (req, res) => {
+  try {
+    const beforeCount = await Report.countDocuments({});
+    await Report.deleteMany({});
+    await Counter.deleteMany({});
+    await logAudit({
+      actorRole: req.auth.role,
+      actorId: req.auth.userId,
+      actorName: req.auth.fullName || req.auth.username || '',
+      action: 'REPORTS_CLEAR_ALL',
+      targetType: 'REPORT',
+      targetId: '*',
+      details: `Cleared ${beforeCount} reports via admin console`,
+    });
+    await emitRealtime('reports-cleared', {});
+    return res.redirect('/admin?ok=All%20reports%20have%20been%20deleted&tab=reports');
+  } catch (err) {
+    console.error(err);
+    return res.redirect('/admin?err=Could%20not%20delete%20all%20reports&tab=reports');
+  }
+});
+
 // â”€â”€ API: submit a normal report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/report', async (req, res) => {
   try {
+    const clean = sanitizeNormalReportInput(req.body || {});
     const seq      = await Counter.nextSeq('report');
     const reportId = `RPT-${String(seq).padStart(4, '0')}`;
 
     const report = await Report.create({
-      ...req.body,
+      ...clean,
       reportId,
       status:      'new',
       timestamp:   new Date(),
-      credibility: computeCredibility(req.body),
+      credibility: computeCredibility(clean),
       isPanic:     false,
     });
 
@@ -499,19 +657,24 @@ app.post('/api/report', async (req, res) => {
     res.json({ success: true, id: reportId });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Could not save report' });
+    const msg = err && err.message ? err.message : 'Could not save report';
+    if (/missing required|invalid|too large|required/i.test(msg)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: 'Could not save report' });
   }
 });
 
 // â”€â”€ API: Panic SOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.post('/api/panic', async (req, res) => {
   try {
+    const panicInput = sanitizePanicInput(req.body || {});
     const seq      = await Counter.nextSeq('panic');
     const reportId = `SOS-${String(seq).padStart(4, '0')}`;
-    const gps = String(req.body.gps || '').trim();
-    let barangay = String(req.body.barangay || '').trim();
-    let landmark = String(req.body.landmark || '').trim();
-    let street = String(req.body.street || '').trim();
+    const gps = panicInput.gps;
+    let barangay = panicInput.barangay;
+    let landmark = panicInput.landmark;
+    let street = panicInput.street;
 
     const coords = parseGpsCoords(gps);
     if (coords && (!barangay || !landmark || !street)) {
@@ -536,7 +699,7 @@ app.post('/api/panic', async (req, res) => {
     const report = await Report.create({
       reportId,
       name:          'PANIC ALERT',
-      contact:       req.body.contact,
+      contact:       panicInput.contact,
       emergencyType: 'PANIC SOS',
       severity:      'High',
       barangay:      barangay || 'Unknown location',
@@ -556,13 +719,21 @@ app.post('/api/panic', async (req, res) => {
     res.json({ success: true, id: reportId });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Could not save panic report' });
+    const msg = err && err.message ? err.message : 'Could not save panic report';
+    if (/invalid|required/i.test(msg)) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: 'Could not save panic report' });
   }
 });
 
 // â”€â”€ API: update status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
   try {
+    const nextStatus = String(req.body.status || '').trim().toLowerCase();
+    if (!VALID_REPORT_STATUSES.has(nextStatus)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
     const where = reportLookupQuery(req.params.id);
     const updates = { status: req.body.status };
     if (req.auth && req.auth.role === 'dispatcher') {
@@ -574,7 +745,6 @@ app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), as
       updates,
       { new: true }
     );
-    if (!report) return res.status(404).json({ error: 'Not found' });
     await logAudit({
       actorRole: req.auth.role,
       actorId: req.auth.userId,
@@ -584,7 +754,14 @@ app.patch('/api/report/:id/status', requireRolesApi(['dispatcher', 'admin']), as
       targetId: report.reportId || String(report._id),
       details: `Set status to ${report.status}`,
     });
-    await emitRealtime('report-updated', { id: report.reportId || String(report._id), status: report.status });
+    await emitRealtime('report-updated', {
+      id: report.reportId || String(report._id),
+      status: report.status,
+      assignedToId: report.assignedToId || '',
+      assignedToUsername: report.assignedToUsername || '',
+      assignedToName: report.assignedToName || '',
+      assignedAt: report.assignedAt || null,
+    });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -600,7 +777,7 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
 
     for (const field of allowedFields) {
       if (Object.prototype.hasOwnProperty.call(req.body, field)) {
-        updates[field] = String(req.body[field] ?? '').trim();
+        updates[field] = cleanInputText(req.body[field], 2000);
       }
     }
 
@@ -608,9 +785,33 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
       return res.status(400).json({ error: 'No editable fields provided' });
     }
 
+    if (Object.prototype.hasOwnProperty.call(updates, 'emergencyType') && updates.emergencyType) {
+      updates.emergencyType = normalizeEmergencyType(updates.emergencyType);
+      if (!VALID_EMERGENCY_TYPES.has(updates.emergencyType)) {
+        return res.status(400).json({ error: 'Invalid emergency type' });
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'severity') && updates.severity) {
+      updates.severity = normalizeSeverity(updates.severity);
+      if (!VALID_SEVERITIES.has(updates.severity)) {
+        return res.status(400).json({ error: 'Invalid severity' });
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'gps') && updates.gps && !parseGpsCoords(updates.gps)) {
+      return res.status(400).json({ error: 'Invalid GPS format' });
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, 'contact') && updates.contact) {
+      const digits = updates.contact.replace(/[\s-]/g, '');
+      if (!/^(?:\+63|0)9\d{9}$/.test(digits)) {
+        return res.status(400).json({ error: 'Invalid contact number' });
+      }
+    }
+
     const where = reportLookupQuery(req.params.id);
     const current = await Report.findOne(where);
     if (!current) return res.status(404).json({ error: 'Not found' });
+    const assignment = await resolveDispatcherAssignmentPatch(req, current);
+    if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
 
     const merged = {
       name: current.name,
@@ -625,7 +826,7 @@ app.patch('/api/report/:id/details', requireRolesApi(['dispatcher', 'admin']), a
 
     const report = await Report.findOneAndUpdate(
       where,
-      updates,
+      { ...updates, ...assignment.patch },
       { new: true }
     );
     await logAudit({
@@ -671,13 +872,118 @@ app.delete('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req
 });
 
 // â”€â”€ API: list all reports (JSON) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-app.get('/api/reports', async (_req, res) => {
+app.get('/api/reports', requireRolesApi(['dispatcher', 'admin']), async (_req, res) => {
   try {
-    const reports = await Report.find().sort({ timestamp: -1 }).lean({ virtuals: true });
+    const reports = await Report.find(buildReportVisibilityQuery(_req.auth)).sort({ timestamp: -1 }).lean({ virtuals: true });
     res.json(reports);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not fetch reports' });
+  }
+});
+
+app.get('/api/dispatchers/active', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
+  try {
+    const dispatchers = await Dispatcher.find({ isActive: true }).sort({ fullName: 1, username: 1 }).lean();
+    const payload = dispatchers.map(d => ({
+      id: String(d._id),
+      username: d.username || '',
+      fullName: d.fullName || d.username || '',
+      isSelf: String(d._id) === String(req.auth.userId || ''),
+    }));
+    res.json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not fetch active dispatchers' });
+  }
+});
+
+app.post('/api/report/:id/claim', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
+  try {
+    const where = reportLookupQuery(req.params.id);
+    const current = await Report.findOne(where);
+    if (!current) return res.status(404).json({ error: 'Not found' });
+
+    const assignment = await resolveDispatcherAssignmentPatch(req, current, { requireClaimWhenUnassigned: true });
+    if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+
+    const claimWhere = req.auth.role === 'dispatcher'
+      ? {
+        $and: [
+          where,
+          {
+            $or: [
+              { assignedToId: { $exists: false } },
+              { assignedToId: null },
+              { assignedToId: '' },
+              { assignedToId: String(req.auth.userId || '') },
+            ],
+          },
+        ],
+      }
+      : where;
+    const report = await Report.findOneAndUpdate(claimWhere, { ...assignment.patch }, { new: true });
+    if (!report) return res.status(409).json({ error: 'This report was already claimed by another dispatcher' });
+    await logAudit({
+      actorRole: req.auth.role,
+      actorId: req.auth.userId,
+      actorName: req.auth.fullName || req.auth.username || '',
+      action: 'REPORT_CLAIM',
+      targetType: 'REPORT',
+      targetId: report.reportId || String(report._id),
+      details: `Claimed report by ${report.assignedToName || req.auth.username}`,
+    });
+    const payload = report.toJSON();
+    await emitRealtime('report-assignment-updated', payload);
+    return res.json({ success: true, report: payload });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Could not claim report' });
+  }
+});
+
+app.post('/api/report/:id/pass', requireRolesApi(['dispatcher', 'admin']), async (req, res) => {
+  try {
+    const targetDispatcherId = String(req.body.targetDispatcherId || '').trim();
+    if (!targetDispatcherId || !mongoose.Types.ObjectId.isValid(targetDispatcherId)) {
+      return res.status(400).json({ error: 'Invalid target dispatcher' });
+    }
+    const target = await Dispatcher.findOne({ _id: targetDispatcherId, isActive: true }).lean();
+    if (!target) return res.status(404).json({ error: 'Target dispatcher not active' });
+
+    const where = reportLookupQuery(req.params.id);
+    const current = await Report.findOne(where);
+    if (!current) return res.status(404).json({ error: 'Not found' });
+
+    const assignment = await resolveDispatcherAssignmentPatch(req, current, { requireClaimWhenUnassigned: false });
+    if (!assignment.ok) return res.status(assignment.status).json({ error: assignment.error });
+
+    const nextAssignedName = String(target.fullName || target.username || '').trim();
+    const report = await Report.findOneAndUpdate(
+      where,
+      {
+        assignedToId: String(target._id),
+        assignedToUsername: String(target.username || '').trim(),
+        assignedToName: nextAssignedName,
+        assignedAt: new Date(),
+      },
+      { new: true }
+    );
+    await logAudit({
+      actorRole: req.auth.role,
+      actorId: req.auth.userId,
+      actorName: req.auth.fullName || req.auth.username || '',
+      action: 'REPORT_PASS',
+      targetType: 'REPORT',
+      targetId: report.reportId || String(report._id),
+      details: `Passed report to ${nextAssignedName}`,
+    });
+    const payload = report.toJSON();
+    await emitRealtime('report-assignment-updated', payload);
+    return res.json({ success: true, report: payload });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Could not pass report' });
   }
 });
 
@@ -868,6 +1174,7 @@ async function createSession(req, res, payload) {
     maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: 'lax',
+    secure: isHttps || process.env.NODE_ENV === 'production',
     path: '/',
   });
 
@@ -880,6 +1187,7 @@ function clearSessionCookie(res, role = null, explicitCookieName = '') {
   res.clearCookie(cookieName, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
     path: '/',
   });
 }
@@ -958,8 +1266,16 @@ async function ensureDefaultAdmin() {
   const username = String(process.env.ADMIN_USERNAME || 'admin').trim();
   const password = String(process.env.ADMIN_PASSWORD || 'admin123');
   const fullName = String(process.env.ADMIN_FULLNAME || 'System Administrator').trim();
-  const existing = await Admin.findOne({ username }).lean();
-  if (existing) return;
+  const adminCount = await Admin.countDocuments({});
+  if (adminCount > 0) return;
+
+  const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+  const usingFallbackUsername = !String(process.env.ADMIN_USERNAME || '').trim() || username === 'admin';
+  const usingFallbackPassword = !String(process.env.ADMIN_PASSWORD || '').trim() || password === 'admin123';
+  if (isProduction && (usingFallbackUsername || usingFallbackPassword || password.length < 10)) {
+    throw new Error('Production bootstrap requires explicit ADMIN_USERNAME and strong ADMIN_PASSWORD (10+ chars).');
+  }
+
   await Admin.create({ username, fullName, passwordHash: hashPassword(password) });
   console.log(`  âœ”  Default admin created (${username})`);
 }
@@ -980,6 +1296,205 @@ function buildReportDateRangeFilter(fromRaw, toRaw) {
   }
   if (Object.keys(ts).length) where.timestamp = ts;
   return { from, to, where };
+}
+
+function parsePage(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.floor(n);
+}
+
+function parsePerPage(value, fallback = 20) {
+  const allowed = [10, 20, 40, 80, 100, 200];
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  const v = Math.floor(n);
+  if (!allowed.includes(v)) return fallback;
+  return v;
+}
+
+function buildPagerMeta(page, limit, total) {
+  const totalCount = Number(total) > 0 ? Number(total) : 0;
+  const safeLimit = Number(limit) > 0 ? Number(limit) : 20;
+  const totalPages = Math.max(1, Math.ceil(totalCount / safeLimit));
+  const currentPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  const skip = (currentPage - 1) * safeLimit;
+  return {
+    totalCount,
+    totalPages,
+    currentPage,
+    limit: safeLimit,
+    skip,
+  };
+}
+
+function buildPagerView(baseQuery, tab, pageKey, meta) {
+  const q = { ...(baseQuery || {}) };
+  const makeUrl = (n) => {
+    const params = new URLSearchParams();
+    Object.entries(q).forEach(([k, v]) => {
+      if (v == null || v === '') return;
+      params.set(k, String(v));
+    });
+    params.set(pageKey, String(n));
+    params.set('tab', tab);
+    return `/admin?${params.toString()}`;
+  };
+  return {
+    tab,
+    pageKey,
+    currentPage: meta.currentPage,
+    totalPages: meta.totalPages,
+    totalCount: meta.totalCount,
+    limit: meta.limit,
+    hasPrev: meta.currentPage > 1,
+    hasNext: meta.currentPage < meta.totalPages,
+    prevUrl: makeUrl(Math.max(1, meta.currentPage - 1)),
+    nextUrl: makeUrl(Math.min(meta.totalPages, meta.currentPage + 1)),
+    pages: Array.from({ length: meta.totalPages }, (_x, i) => {
+      const n = i + 1;
+      return { n, isCurrent: n === meta.currentPage, url: makeUrl(n) };
+    }),
+  };
+}
+
+function buildReportVisibilityQuery(auth) {
+  if (!auth) return { _id: null };
+  if (auth.role === 'admin') return {};
+  const userId = String(auth.userId || '').trim();
+  return {
+    $or: [
+      { assignedToId: { $exists: false } },
+      { assignedToId: null },
+      { assignedToId: '' },
+      { assignedToId: userId },
+    ],
+  };
+}
+
+async function resolveDispatcherAssignmentPatch(req, currentReport, opts = {}) {
+  if (!req || !req.auth || req.auth.role !== 'dispatcher') {
+    return { ok: true, patch: {} };
+  }
+
+  const dispatcher = await Dispatcher.findOne({ _id: req.auth.userId, isActive: true }).lean();
+  if (!dispatcher) {
+    return { ok: false, status: 403, error: 'Dispatcher account is inactive' };
+  }
+
+  const me = String(req.auth.userId || '').trim();
+  const assignedTo = String((currentReport && currentReport.assignedToId) || '').trim();
+  if (assignedTo && assignedTo !== me) {
+    return { ok: false, status: 403, error: 'This report is assigned to another dispatcher' };
+  }
+
+  const shouldClaim = !assignedTo && (opts.requireClaimWhenUnassigned !== false);
+  if (!shouldClaim) return { ok: true, patch: {} };
+  return {
+    ok: true,
+    patch: {
+      assignedToId: me,
+      assignedToUsername: String(dispatcher.username || '').trim(),
+      assignedToName: String(dispatcher.fullName || dispatcher.username || '').trim(),
+      assignedAt: new Date(),
+    },
+  };
+}
+
+function cleanInputText(value, maxLen = 180) {
+  const collapsed = String(value == null ? '' : value)
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (maxLen <= 0) return '';
+  return collapsed.slice(0, maxLen);
+}
+
+function normalizeEmergencyType(value) {
+  const raw = cleanInputText(value, 30);
+  const map = {
+    fire: 'Fire',
+    flood: 'Flood',
+    medical: 'Medical',
+    accident: 'Accident',
+    landslide: 'Landslide',
+    other: 'Other',
+    'panic sos': 'PANIC SOS',
+  };
+  return map[raw.toLowerCase()] || raw;
+}
+
+function normalizeSeverity(value) {
+  const raw = cleanInputText(value, 10).toLowerCase();
+  if (raw === 'high') return 'High';
+  if (raw === 'medium') return 'Medium';
+  if (raw === 'low') return 'Low';
+  return cleanInputText(value, 10);
+}
+
+function sanitizeDataImage(photoRaw) {
+  const photo = String(photoRaw || '').trim();
+  if (!photo) return '';
+  if (!/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(photo)) {
+    throw new Error('Invalid photo format');
+  }
+  if (photo.length > 10 * 1024 * 1024) {
+    throw new Error('Photo is too large');
+  }
+  return photo;
+}
+
+function sanitizeNormalReportInput(body) {
+  const clean = {
+    name: cleanInputText(body.name, 120),
+    contact: cleanInputText(body.contact, 32),
+    emergencyType: normalizeEmergencyType(body.emergencyType),
+    severity: normalizeSeverity(body.severity),
+    barangay: cleanInputText(body.barangay, 120),
+    landmark: cleanInputText(body.landmark, 180),
+    street: cleanInputText(body.street, 180),
+    description: cleanInputText(body.description, 1200),
+    gps: cleanInputText(body.gps, 64),
+    photo: sanitizeDataImage(body.photo),
+  };
+
+  if (!clean.name || !clean.contact || !clean.emergencyType || !clean.severity || !clean.barangay || !clean.landmark || !clean.street || !clean.description) {
+    throw new Error('Missing required report fields');
+  }
+  if (!VALID_EMERGENCY_TYPES.has(clean.emergencyType)) {
+    throw new Error('Invalid emergency type');
+  }
+  if (!VALID_SEVERITIES.has(clean.severity)) {
+    throw new Error('Invalid severity');
+  }
+  if (!/^(?:\+63|0)9\d{9}$/.test(clean.contact.replace(/[\s-]/g, ''))) {
+    throw new Error('Invalid contact number');
+  }
+  if (!parseGpsCoords(clean.gps)) {
+    throw new Error('Invalid GPS coordinates');
+  }
+  return clean;
+}
+
+function sanitizePanicInput(body) {
+  const clean = {
+    contact: cleanInputText(body.contact, 32),
+    gps: cleanInputText(body.gps, 64),
+    barangay: cleanInputText(body.barangay, 120),
+    landmark: cleanInputText(body.landmark, 180),
+    street: cleanInputText(body.street, 180),
+  };
+  if (!clean.contact) {
+    throw new Error('Contact number is required');
+  }
+  if (!/^(?:\+63|0)9\d{9}$/.test(clean.contact.replace(/[\s-]/g, ''))) {
+    throw new Error('Invalid contact number');
+  }
+  if (clean.gps && clean.gps.toLowerCase() !== 'unavailable' && !parseGpsCoords(clean.gps)) {
+    throw new Error('Invalid GPS coordinates');
+  }
+  if (clean.gps.toLowerCase() === 'unavailable') clean.gps = '';
+  return clean;
 }
 
 async function renderAdminPage(req, res, options = {}, statusCode = 200) {
@@ -1007,7 +1522,7 @@ async function renderAdminPage(req, res, options = {}, statusCode = 200) {
     .lean();
   return res.status(statusCode).render('admin', {
     dispatchers,
-    reports,
+    reports: reportsWithDispatcher,
     auditLogs,
     stats: {
       totalReports: reportTotal,

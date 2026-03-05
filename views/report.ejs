@@ -3,43 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MDRRMO — Report Emergency</title>
+  <title>SVS — Report Emergency</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --amber:        #F59E0B;
-      --amber-dark:   #D97706;
-      --amber-deep:   #B45309;
-      --amber-light:  #FFFBEB;
-      --amber-border: #FCD34D;
-      --orange:       #EA580C;
-      --orange-light: #FFF7ED;
-      --orange-border:#FDBA74;
+      --amber:        #FACC15;
+      --amber-dark:   #EAB308;
+      --amber-deep:   #CA8A04;
+      --amber-light:  #FEFCE8;
+      --amber-border: #FDE047;
+      --orange:       #DC2626;
+      --orange-light: #FEF2F2;
+      --orange-border:#FCA5A5;
       --red:          #DC2626;
       --red-light:    #FEF2F2;
-      --red-border:   #FECACA;
-      --green:        #059669;
-      --green-light:  #ECFDF5;
-      --green-border: #A7F3D0;
+      --red-border:   #FCA5A5;
+      --green:        #2563EB;
+      --green-light:  #DBEAFE;
+      --green-border: #93C5FD;
       --blue:         #1D4ED8;
-      --bg:           #FAF8F4;
-      --surface:      #FFFFFF;
-      --border:       #E8E2D5;
-      --border-mid:   #D5CBBA;
-      --text:         #18120A;
-      --text2:        #433720;
-      --muted:        #7A6A50;
-      --muted2:       #A89880;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
-      --shadow-md: 0 4px 14px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.04);
-      --shadow-lg: 0 12px 36px rgba(0,0,0,.10),0 4px 14px rgba(0,0,0,.05);
-      --shadow-xl: 0 24px 56px rgba(0,0,0,.12),0 8px 20px rgba(0,0,0,.06);
+      --bg:           #E8F1FF;
+      --surface:      #F4F8FF;
+      --border:       #BFD6F5;
+      --border-mid:   #97BDE9;
+      --text:         #0F172A;
+      --text2:        #1E3A8A;
+      --muted:        #334155;
+      --muted2:       #64748B;
+      --shadow-sm: 0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.05);
+      --shadow-md: 0 4px 14px rgba(15,23,42,.10),0 2px 6px rgba(15,23,42,.06);
+      --shadow-lg: 0 12px 36px rgba(15,23,42,.12),0 4px 14px rgba(15,23,42,.07);
+      --shadow-xl: 0 24px 56px rgba(15,23,42,.14),0 8px 20px rgba(15,23,42,.08);
       --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html{scroll-behavior:smooth;}
-    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+    body{
+      font-family:'Outfit',sans-serif;color:var(--text);-webkit-font-smoothing:antialiased;
+      background:
+        radial-gradient(760px 450px at 110% -10%, rgba(29,78,216,.26), transparent 62%),
+        radial-gradient(560px 330px at -10% 110%, rgba(220,38,38,.16), transparent 62%),
+        radial-gradient(420px 260px at 55% 10%, rgba(250,204,21,.22), transparent 66%),
+        var(--bg);
+    }
     ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:var(--bg);} ::-webkit-scrollbar-thumb{background:var(--border-mid);border-radius:99px;}
 
     /* ── HEADER ── */
@@ -48,7 +55,7 @@
       height:64px;
       display:flex;align-items:center;justify-content:space-between;
       padding:0 1.75rem;
-      background:rgba(255,255,255,.93);
+      background:rgba(235,245,255,.9);
       backdrop-filter:blur(20px) saturate(160%);
       border-bottom:1px solid var(--border);
       box-shadow:0 1px 2px rgba(0,0,0,.05);
@@ -56,7 +63,7 @@
     .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:inherit;}
     .brand-shield{
       width:38px;height:38px;
-      background:linear-gradient(145deg,var(--amber),var(--orange));
+      background:linear-gradient(145deg,var(--blue),var(--red));
       border-radius:10px;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 4px 14px rgba(245,158,11,.38);
@@ -88,7 +95,7 @@
 
     /* ── PANIC STRIP ── */
     .panic-strip{
-      background:linear-gradient(180deg,#FFF1F2 0%,#FFF7ED 100%);
+      background:linear-gradient(180deg,#E9F2FF 0%,#FEFCE8 52%,#FEF2F2 100%);
       border-bottom:1px solid rgba(220,38,38,.12);
       padding:2.5rem 1.5rem 2.75rem;
       text-align:center;position:relative;overflow:hidden;
@@ -97,7 +104,7 @@
       content:'';position:absolute;top:50%;left:50%;
       transform:translate(-50%,-50%);
       width:420px;height:420px;border-radius:50%;
-      background:radial-gradient(circle,rgba(220,38,38,.05) 0%,transparent 68%);
+      background:radial-gradient(circle,rgba(29,78,216,.12) 0%,transparent 68%);
       pointer-events:none;
     }
     .panic-eyebrow{
@@ -144,23 +151,23 @@
     .form-eyebrow{
       display:inline-flex;align-items:center;gap:6px;
       font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:700;
-      letter-spacing:2px;text-transform:uppercase;color:var(--amber-dark);
-      background:var(--amber-light);border:1px solid var(--amber-border);
+      letter-spacing:2px;text-transform:uppercase;color:var(--red);
+      background:var(--red-light);border:1px solid var(--red-border);
       border-radius:99px;padding:.28rem .85rem;margin-bottom:.9rem;
     }
     .form-eyebrow svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
     .form-head h1{font-weight:900;font-size:2.9rem;line-height:1.05;letter-spacing:-2px;}
-    .form-head h1 em{font-style:normal;color:var(--amber-dark);position:relative;}
+    .form-head h1 em{font-style:normal;color:var(--red);position:relative;}
     .form-head h1 em::after{
       content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;
-      background:linear-gradient(90deg,var(--amber),var(--orange));
+      background:linear-gradient(90deg,var(--red),var(--orange));
       border-radius:2px;opacity:.55;
     }
     .form-head p{margin-top:1rem;color:var(--text2);font-size:.95rem;line-height:1.7;max-width:500px;}
 
     .alert-strip{
       display:flex;align-items:flex-start;gap:.85rem;
-      background:var(--orange-light);border:1px solid var(--orange-border);
+      background:linear-gradient(135deg,#FEFCE8,#FEF2F2);border:1px solid var(--orange-border);
       border-radius:var(--r-lg);padding:1.05rem 1.25rem;
       margin-bottom:2.25rem;font-size:.87rem;line-height:1.65;
       animation:fadeUp .4s .08s ease both;
@@ -171,7 +178,7 @@
 
     /* cards */
     .card{
-      background:var(--surface);border:1.5px solid var(--border);
+      background:linear-gradient(180deg,#F8FBFF,#EEF5FF);border:1.5px solid var(--border);
       border-radius:var(--r-xl);padding:2rem;
       margin-bottom:1.25rem;
       box-shadow:var(--shadow-sm);
@@ -199,7 +206,7 @@
       display:flex;align-items:center;justify-content:center;
     }
     .card-icon svg{width:22px;height:22px;stroke:var(--amber-deep);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}
-    .card-step{font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;color:var(--amber-dark);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+    .card-step{font-family:'JetBrains Mono',monospace;font-size:.58rem;font-weight:700;color:var(--red);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
     .card-title{font-weight:800;font-size:1.03rem;color:var(--text);letter-spacing:-.2px;}
     .card-sub{font-size:.77rem;color:var(--muted);margin-top:2px;}
 
@@ -264,7 +271,7 @@
     }
     .etype-icon{
       width:42px;height:42px;border-radius:11px;
-      background:var(--surface);border:1.5px solid var(--border);
+      background:#F0F6FF;border:1.5px solid var(--border);
       display:flex;align-items:center;justify-content:center;
       transition:all .2s;
     }
@@ -373,7 +380,7 @@
     /* ── MODALS / OVERLAYS ── */
     .overlay{
       display:none;position:fixed;inset:0;
-      background:rgba(250,248,244,.96);backdrop-filter:blur(14px);
+      background:rgba(233,243,255,.95);backdrop-filter:blur(14px);
       z-index:500;align-items:center;justify-content:center;
       flex-direction:column;text-align:center;padding:2rem;
     }
@@ -539,10 +546,53 @@
     .toast strong{display:block;font-weight:700;font-size:.83rem;color:var(--text);margin-bottom:1px;}
     .toast span{font-size:.76rem;color:var(--text2);}
 
+    /* footer */
+    .report-footer{
+      margin:0;
+      padding:2rem 1.35rem 2.2rem;
+      background:linear-gradient(180deg, rgba(29,78,216,.10), rgba(220,38,38,.08));
+      border-top:1px solid var(--border);
+    }
+    .report-footer-inner{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:1.35fr 1fr;
+      gap:1rem 1.5rem;
+    }
+    .rf-brand{display:flex;align-items:flex-start;gap:.75rem;}
+    .rf-badge{
+      width:38px;height:38px;border-radius:10px;flex-shrink:0;
+      background:linear-gradient(145deg,var(--blue),var(--red));
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      font-weight:900;font-family:'JetBrains Mono',monospace;letter-spacing:.4px;
+      box-shadow:0 4px 14px rgba(29,78,216,.25);
+    }
+    .rf-name{font-weight:900;font-size:.95rem;line-height:1.15;}
+    .rf-sub{font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+    .rf-text{font-size:.8rem;color:var(--text2);line-height:1.65;margin-top:.38rem;max-width:340px;}
+    .rf-col h4{
+      font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:1.1px;
+      text-transform:uppercase;color:var(--text2);margin:0 0 .45rem;
+    }
+    .rf-list{list-style:none;padding:0;margin:0;display:grid;gap:.34rem;}
+    .rf-list li,.rf-link{font-size:.8rem;color:var(--text2);text-decoration:none;}
+    .rf-link:hover{text-decoration:underline;color:var(--blue);}
+    .rf-bottom{
+      max-width:1100px;
+      margin:.95rem auto 0;
+      padding-top:.75rem;
+      border-top:1px dashed var(--border-mid);
+      font-size:.73rem;color:var(--muted);display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;
+    }
+
     @media(max-width:768px){
       .form-wrap{padding:2rem 1rem 3.5rem;}
       .form-head h1{font-size:2.2rem;}
       .card{padding:1.5rem;}
+      .report-footer{padding:1.5rem 1rem 1.75rem}
+      .report-footer-inner{grid-template-columns:1fr;gap:1rem}
+      .rf-text{max-width:none}
     }
   </style>
 </head>
@@ -556,8 +606,8 @@
       <svg viewBox="0 0 24 24"><path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>
     </div>
     <div>
-      <div class="brand-name">FRANZ<em>OLU</em>TIONS</div>
-      <div class="brand-sub">Emergency Reporting</div>
+      <div class="brand-name">SVS</div>
+      <div class="brand-sub">Smart Verification System</div>
     </div>
   </a>
   <div class="header-right">
@@ -589,16 +639,16 @@
     <div class="form-eyebrow">
       <!-- Heroicon: document-text -->
       <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
-      MDRRMO Emergency Report System
+      SVS Emergency Report System
     </div>
     <h1>Report an <em>Emergency</em></h1>
-    <p>Your report will be received immediately by MDRRMO dispatchers. Provide as much detail as possible for a faster response.</p>
+    <p>Your report will be received immediately by SVS dispatchers. Provide as much detail as possible for a faster response.</p>
   </div>
 
   <div class="alert-strip">
     <!-- Heroicon: exclamation-triangle -->
     <svg viewBox="0 0 24 24"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-    <span><strong>For life-threatening emergencies, call 911 immediately.</strong><br>This form is for reporting incidents and requesting assistance from your local MDRRMO.</span>
+    <span><strong>For life-threatening emergencies, call 911 immediately.</strong><br>This form is for reporting incidents and requesting assistance through SVS.</span>
   </div>
 
   <!-- STEP 01 -->
@@ -805,13 +855,41 @@
   </button>
 </div>
 
+<!-- FOOTER -->
+<footer class="report-footer">
+  <div class="report-footer-inner">
+    <div>
+      <div class="rf-brand">
+        <div class="rf-badge">SVS</div>
+        <div>
+          <div class="rf-name">Smart Verification System</div>
+          <div class="rf-sub">Emergency Reporting</div>
+        </div>
+      </div>
+      <p class="rf-text">Fast and reliable citizen incident reporting with real-time dispatcher visibility and location-aware alerts.</p>
+    </div>
+    <div class="rf-col">
+      <h4>Contact Us</h4>
+      <ul class="rf-list">
+        <li>Hotline: 911</li>
+        <li>Office: +63 917 000 0000</li>
+        <li>Email: support@svs.local</li>
+      </ul>
+    </div>
+  </div>
+  <div class="rf-bottom">
+    <span>&copy; <span id="footerYear"></span> SVS. All rights reserved.</span>
+    <span>Built for easy and fast emergency reporting.</span>
+  </div>
+</footer>
+
 <!-- SUCCESS OVERLAY -->
 <div class="overlay" id="successOverlay">
   <div class="success-ring">
     <svg viewBox="0 0 24 24"><path d="M4.5 12.75l6 6 9-13.5"/></svg>
   </div>
   <h2>Report Submitted</h2>
-  <p>Your emergency report has been received by MDRRMO dispatchers. You will be contacted at your provided number for verification.</p>
+  <p>Your emergency report has been received by SVS dispatchers. You will be contacted at your provided number for verification.</p>
   <div class="rpt-id" id="rptId">RPT-0000</div>
   <button class="ghost-btn" onclick="closeSuccess()">Submit Another Report</button>
 </div>
@@ -866,6 +944,9 @@
 <script>
   let selType_ = '', selSev_ = '', photoData = null;
   let panicNum = '';
+  const API_TIMEOUT_MS = 15000;
+  const fy = document.getElementById('footerYear');
+  if (fy) fy.textContent = String(new Date().getFullYear());
   try { panicNum = localStorage.getItem('mdrrmo_panic') || ''; } catch(e) {}
   panicNum = toIntlPhone(panicNum) || '';
   bindInputSecurity();
@@ -924,6 +1005,22 @@
 
   function sanitizeText(v, maxLen = 300) {
     return String(v || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, maxLen);
+  }
+
+  function isSafeImageDataUrl(v) {
+    return /^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(String(v || '').trim());
+  }
+
+  async function fetchJson(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: ctrl.signal });
+      const data = await res.json().catch(() => ({}));
+      return { res, data };
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   function showInvalid(el) {
@@ -994,12 +1091,43 @@
 
   function handlePhoto(input) {
     if (!input.files[0]) return;
+    const file = input.files[0];
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type || '')) {
+      toast('Invalid image', 'Please upload PNG, JPG, or WEBP only.', 'warn');
+      input.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast('Image too large', 'Please upload an image up to 10 MB only.', 'warn');
+      input.value = '';
+      return;
+    }
     const r = new FileReader();
     r.onload = e => {
-      photoData = e.target.result;
-      document.getElementById('uploadArea').innerHTML = `<img src="${photoData}" style="max-height:120px;border-radius:9px;max-width:100%;"><p style="margin-top:8px;font-size:.82rem;color:var(--green);font-weight:700;">Photo attached</p>`;
+      const result = String((e && e.target && e.target.result) || '').trim();
+      if (!isSafeImageDataUrl(result)) {
+        toast('Invalid image', 'Could not process this photo safely.', 'warn');
+        input.value = '';
+        return;
+      }
+      photoData = result;
+      const area = document.getElementById('uploadArea');
+      area.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = result;
+      img.style.maxHeight = '120px';
+      img.style.borderRadius = '9px';
+      img.style.maxWidth = '100%';
+      const note = document.createElement('p');
+      note.style.marginTop = '8px';
+      note.style.fontSize = '.82rem';
+      note.style.color = 'var(--green)';
+      note.style.fontWeight = '700';
+      note.textContent = 'Photo attached';
+      area.appendChild(img);
+      area.appendChild(note);
     };
-    r.readAsDataURL(input.files[0]);
+    r.readAsDataURL(file);
   }
 
   async function submitReport() {
@@ -1058,11 +1186,10 @@
         submitBtn.disabled = true;
         submitBtn.style.opacity = '.7';
       }
-      const res = await fetch('/api/report', {
+      const { res, data: d } = await fetchJson('/api/report', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name, contact, emergencyType: selType_, severity: selSev_, barangay, landmark, street, description, gps: gpsValue, photo: photoData })
       });
-      const d = await res.json().catch(() => ({}));
       if (!res.ok || !d.success) {
         toast('Submit failed', d.error || 'Could not submit. Please try again.','warn');
         return;
@@ -1130,8 +1257,7 @@
         street: loc.street || '',
       };
       try {
-        const res = await fetch('/api/panic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        const d = await res.json().catch(() => ({}));
+        const { res, data: d } = await fetchJson('/api/panic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         if (!res.ok || !d.success) throw new Error(d.error || 'panic send failed');
         document.getElementById('sendingState').style.display='none';
         document.getElementById('sosId').textContent = d.id;
@@ -1250,9 +1376,8 @@
   async function reverseGeocode(lat, lng) {
     const url = `/api/reverse-geocode?lat=${encodeURIComponent(lat)}&lng=${encodeURIComponent(lng)}`;
     try {
-      const r = await fetch(url);
+      const { res: r, data: j } = await fetchJson(url, {}, 12000);
       if (r.ok) {
-        const j = await r.json();
         return {
           barangay: String((j && j.barangay) || '').trim(),
           landmark: String((j && j.landmark) || '').trim(),
